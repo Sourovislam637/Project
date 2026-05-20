@@ -523,23 +523,23 @@ IMG_PAGE = int(IMG_PAGE) if IMG_PAGE.isdigit() else ''
 
 AUTHOR_NAME = environ.get('AUTHOR_NAME', '')
 if len(AUTHOR_NAME) == 0:
-    AUTHOR_NAME = 'KPS Bots'
+    AUTHOR_NAME = 'ʀᴀʀᴇ ʙᴏᴛꜱ ʜᴜʙ'
 
 AUTHOR_URL = environ.get('AUTHOR_URL', '')
 if len(AUTHOR_URL) == 0:
-    AUTHOR_URL = 'https://telegram.me/KPSBots'
+    AUTHOR_URL = 'https://telegram.me/Rare_Bots_Hub'
 
 TITLE_NAME = environ.get('TITLE_NAME', '')
 if len(TITLE_NAME) == 0:
-    TITLE_NAME = 'KPSML-X Leech Bot'
+    TITLE_NAME = 'Rare Leech Bot'
     
 COVER_IMAGE = environ.get('COVER_IMAGE', '')
 if len(COVER_IMAGE) == 0:
-    COVER_IMAGE = 'https://graph.org/file/0ff9d5e94a070fe4154c0.jpg'
+    COVER_IMAGE = 'https://graph.org/file/b4f436c65b5a4a64167c6-fc565d1449028a72dc.jpg'
 
 GD_INFO = environ.get('GD_INFO', '')
 if len(GD_INFO) == 0:
-    GD_INFO = 'Uploaded by KPSML-X Leech Bot'
+    GD_INFO = 'Uploaded by Rare Leech Bot'
 
 SAVE_MSG = environ.get('SAVE_MSG', '')
 SAVE_MSG = SAVE_MSG.lower() == 'true'
