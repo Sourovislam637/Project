@@ -36,14 +36,14 @@ async def imdb_search(_, message):
         else:
             movies = get_poster(title, bulk=True)
             if not movies:
-                return await editMessage(k, "<i>No Results Found</i>, Try Again or Use <b>Title ID</b>")
+                return editMessage("<i>No Results Found</i>, Try Again or Use <b>Title ID</b>", k)
             for movie in movies: # Refurbished Soon !!
                 buttons.ibutton(f"🎬 {movie.get('title')} ({movie.get('year')})", f"imdb {user_id} movie {movie.movieID}")
-        
         buttons.ibutton("🚫 Close 🚫", f"imdb {user_id} close")
         await editMessage(k, '<b><i>Here What I found on IMDb.com</i></b>', buttons.build_menu(1))
     else:
         await sendMessage(message, '<i>Send Movie / TV Series Name along with /imdb Command or send IMDB URL</i>')
+
 
 def get_poster(query, bulk=False, id=False, file=None):
     if not id:
@@ -56,28 +56,22 @@ def get_poster(query, bulk=False, id=False, file=None):
         elif file is not None:
             year = findall(r'[1-2]\d{3}', file, IGNORECASE)
             if year:
-                year = list_to_str(year[:1])
-            else:
-                year = None
+                year = list_to_str(year[:1]) 
         else:
             year = None
-            
         movieid = imdb.search_movie(title.lower(), results=10)
         if not movieid:
             return None
-            
         if year:
             filtered = list(filter(lambda k: str(k.get('year')) == str(year), movieid)) or movieid
         else:
             filtered = movieid
-            
         movieid = list(filter(lambda k: k.get('kind') in ['movie', 'tv series'], filtered)) or filtered
         if bulk:
             return movieid
         movieid = movieid[0].movieID
     else:
         movieid = query
-        
     movie = imdb.get_movie(movieid)
     if movie.get("original air date"):
         date = movie["original air date"]
@@ -85,12 +79,10 @@ def get_poster(query, bulk=False, id=False, file=None):
         date = movie.get("year")
     else:
         date = "N/A"
-        
     plot = movie.get('plot')
     plot = plot[0] if plot and len(plot) > 0 else movie.get('plot outline')
     if plot and len(plot) > 300:
         plot = f"{plot[:300]}..."
-        
     return {
         'title': movie.get('title'),
         'trailer': movie.get('videos'),
@@ -142,17 +134,17 @@ def list_to_hash(k, flagg=False, emoji=False):
     elif len(k) == 1:
         if not flagg:
             if emoji:
-                return str(IMDB_GENRE_EMOJI.get(k[0], '')+" #"+k[0].replace(" ", "").replace("-", ""))
-            return str("#"+k[0].replace(" ", "").replace("-", ""))
+                return str(IMDB_GENRE_EMOJI.get(k[0], '')+" #"+k[0].replace(" ", "_").replace("-", "_"))
+            return str("#"+k[0].replace(" ", "_").replace("-", "_"))
         try:
             conflag = (conn.get(name=k[0])).flag
-            return str(f"{conflag} #" + k[0].replace(" ", "").replace("-", ""))
+            return str(f"{conflag} #" + k[0].replace(" ", "_").replace("-", "_"))
         except AttributeError:
-            return str("#"+k[0].replace(" ", "").replace("-", ""))
+            return str("#"+k[0].replace(" ", "_").replace("-", "_"))
     elif LIST_ITEMS:
         k = k[:int(LIST_ITEMS)]
         for elem in k:
-            ele = elem.replace(" ", "").replace("-", "")
+            ele = elem.replace(" ", "_").replace("-", "_")
             if flagg:
                 with suppress(AttributeError):
                     conflag = (conn.get(name=elem)).flag
@@ -163,18 +155,18 @@ def list_to_hash(k, flagg=False, emoji=False):
         return f'{listing[:-2]}'
     else:
         for elem in k:
-            ele = elem.replace(" ", "").replace("-", "")
+            ele = elem.replace(" ", "_").replace("-", "_")
             if flagg:
                 conflag = (conn.get(name=elem)).flag
                 listing += f'{conflag} '
             listing += f'#{ele}, '
         return listing[:-2]
 
+
 async def imdb_callback(_, query):
     message = query.message
     user_id = query.from_user.id
     data = query.data.split()
-    
     if user_id != int(data[1]):
         await query.answer("Not Yours!", show_alert=True)
     elif data[2] == "movie":
@@ -185,54 +177,49 @@ async def imdb_callback(_, query):
             if isinstance(imdb['trailer'], list):
                 buttons.append([InlineKeyboardButton("▶️ IMDb Trailer ", url=str(imdb['trailer'][-1]))])
                 imdb['trailer'] = list_to_str(imdb['trailer'])
-            else: 
-                buttons.append([InlineKeyboardButton("▶️ IMDb Trailer ", url=str(imdb['trailer']))])
-        
+            else: buttons.append([InlineKeyboardButton("▶️ IMDb Trailer ", url=str(imdb['trailer']))])
         buttons.append([InlineKeyboardButton("🚫 Close 🚫", callback_data=f"imdb {user_id} close")])
         template = ''
-        
         #if int(data[1]) in user_data and user_data[int(data[1])].get('imdb_temp'):
         #    template = user_data[int(data[1])].get('imdb_temp')
         #if not template:
         template = config_dict['IMDB_TEMPLATE']
-        
         if imdb and template != "":
             cap = template.format(
-                title = imdb['title'],
-                trailer = imdb['trailer'],
-                votes = imdb['votes'],
-                aka = imdb["aka"],
-                seasons = imdb["seasons"],
-                box_office = imdb['box_office'],
-                localized_title = imdb['localized_title'],
-                kind = imdb['kind'],
-                imdb_id = imdb["imdb_id"],
-                cast = imdb["cast"],
-                runtime = imdb["runtime"],
-                countries = imdb["countries"],
-                certificates = imdb["certificates"],
-                languages = imdb["languages"],
-                director = imdb["director"],
-                writer = imdb["writer"],
-                producer = imdb["producer"],
-                composer = imdb["composer"],
-                cinematographer = imdb["cinematographer"],
-                music_team = imdb["music_team"],
-                distributors = imdb["distributors"],
-                release_date = imdb['release_date'],
-                year = imdb['year'],
-                genres = imdb['genres'],
-                poster = imdb['poster'],
-                plot = imdb['plot'],
-                rating = imdb['rating'],
-                url = imdb['url'],
-                url_cast = imdb['url_cast'],
-                url_releaseinfo = imdb['url_releaseinfo'],
-                **locals()
+            title = imdb['title'],
+            trailer = imdb['trailer'],
+            votes = imdb['votes'],
+            aka = imdb["aka"],
+            seasons = imdb["seasons"],
+            box_office = imdb['box_office'],
+            localized_title = imdb['localized_title'],
+            kind = imdb['kind'],
+            imdb_id = imdb["imdb_id"],
+            cast = imdb["cast"],
+            runtime = imdb["runtime"],
+            countries = imdb["countries"],
+            certificates = imdb["certificates"],
+            languages = imdb["languages"],
+            director = imdb["director"],
+            writer = imdb["writer"],
+            producer = imdb["producer"],
+            composer = imdb["composer"],
+            cinematographer = imdb["cinematographer"],
+            music_team = imdb["music_team"],
+            distributors = imdb["distributors"],
+            release_date = imdb['release_date'],
+            year = imdb['year'],
+            genres = imdb['genres'],
+            poster = imdb['poster'],
+            plot = imdb['plot'],
+            rating = imdb['rating'],
+            url = imdb['url'],
+            url_cast = imdb['url_cast'],
+            url_releaseinfo = imdb['url_releaseinfo'],
+            **locals()
             )
         else:
             cap = "No Results"
-            
         if imdb.get('poster'):
             try:
                 await bot.send_photo(chat_id=query.message.reply_to_message.chat.id,  caption=cap, photo=imdb['poster'], reply_to_message_id=query.message.reply_to_message.id, reply_markup=InlineKeyboardMarkup(buttons))
@@ -246,6 +233,7 @@ async def imdb_callback(_, query):
         await query.answer()
         await query.message.delete()
         await query.message.reply_to_message.delete()
+
 
 bot.add_handler(MessageHandler(imdb_search, filters=command(BotCommands.IMDBCommand) & CustomFilters.authorized & ~CustomFilters.blacklisted))
 bot.add_handler(CallbackQueryHandler(imdb_callback, filters=regex(r'^imdb')))
