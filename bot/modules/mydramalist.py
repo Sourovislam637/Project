@@ -17,7 +17,7 @@ from bot.helper.telegram_helper.button_build import ButtonMaker
 
 LIST_ITEMS = 4
 IMDB_GENRE_EMOJI = {"Action": "🚀", "Adult": "🔞", "Adventure": "🌋", "Animation": "🎠", "Biography": "📜", "Comedy": "🪗", "Crime": "🔪", "Documentary": "🎞", "Drama": "🎭", "Family": "👨‍👩‍👧‍👦", "Fantasy": "🫧", "Film Noir": "🎯", "Game Show": "🎮", "History": "🏛", "Horror": "🧟", "Musical": "🎻", "Music": "🎸", "Mystery": "🧳", "News": "📰", "Reality-TV": "🖥", "Romance": "🥰", "Sci-Fi": "🌠", "Short": "📝", "Sport": "⛳", "Talk-Show": "👨‍🍳", "Thriller": "🗡", "War": "⚔", "Western": "🪩"}
-MDL_API = "http://kuryana.vercel.app/" #Public API ! Do Not Abuse !
+MDL_API = "https://my-drama-list-api-ten.vercel.app/api" #Public API ! Do Not Abuse !
 
 async def mydramalist_search(_, message):
     if ' ' in message.text:
