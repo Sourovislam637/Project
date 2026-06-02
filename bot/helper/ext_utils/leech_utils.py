@@ -13,6 +13,7 @@ from telegraph import upload_file
 from langcodes import Language
 
 from bot import bot_cache, LOGGER, MAX_SPLIT_SIZE, config_dict, user_data
+from bot.modules.autorename import get_autorename
 from bot.modules.mediainfo import parseinfo
 from bot.helper.ext_utils.bot_utils import cmd_exec, sync_to_async, get_readable_file_size, get_readable_time
 from bot.helper.ext_utils.fs_utils import ARCH_EXT, get_mime_type
@@ -242,6 +243,9 @@ async def split_file(path, size, file_, dirpath, split_size, listener, start_tim
     return True
 
 async def format_filename(file_, user_id, dirpath=None, isMirror=False):
+    if not isMirror:
+        file_ = get_autorename(file_, user_id)
+
     user_dict = user_data.get(user_id, {})
     ftag, ctag = ('m', 'MIRROR') if isMirror else ('l', 'LEECH')
     prefix = config_dict[f'{ctag}_FILENAME_PREFIX'] if (val:=user_dict.get(f'{ftag}prefix', '')) == '' else val
