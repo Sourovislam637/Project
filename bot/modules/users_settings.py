@@ -45,6 +45,7 @@ desp_dict = {'rcc': ['RClone is a command-line program to sync files and directo
             'user_tds': [f'UserTD helps to Upload files via Bot to your Custom Drive Destination via Global SA mail\n\n➲ <b>SA Mail :</b> {"Not Specified" if "USER_TD_SA" not in config_dict else config_dict["USER_TD_SA"]}', 'Send User TD details for Use while Mirror/Clone\n➲ <b>Format:</b>\nname id/link index(optional)\nname2 link2/id2 index(optional)\n\n<b>NOTE:</b>\n<i>1. Drive ID must be valid, then only it will accept\n2. Names can have spaces\n3. All UserTDs are updated on every change\n4. To delete specific UserTD, give Name(s) separated by each line</i>\n\n<b>Timeout:</b> 60 sec'],
             'gofile': ['Gofile is a free file sharing and storage platform. You can store and share your content without any limit.', "Send GoFile's API Key. Get it on https://gofile.io/myProfile, It will not be Accepted if the API Key is Invalid !!\n<b>Timeout:</b> 60 sec"],
             'streamtape': ['Streamtape is free Video Streaming & sharing Hoster', "Send StreamTape's Login and Key\n<b>Format:</b> <code>user_login:pass_key</code>\n<b>Timeout:</b> 60 sec"],
+            'autorename_format': ['Auto Rename changes the filename automatically based on a predefined format.', 'Send your Auto Rename Format.\nAvailable Tags: <code>{title}</code>, <code>{season}</code>, <code>{episode}</code>, <code>{quality}</code>\nExample: <code>{title} - {season}{episode} - {quality}</code>\n<b>Timeout:</b> 60 sec'],
             }
 fname_dict = {'rcc': 'RClone',
              'lprefix': 'Prefix',
@@ -65,6 +66,7 @@ fname_dict = {'rcc': 'RClone',
              'user_tds': 'User Custom TDs',
              'gofile': 'GoFile',
              'streamtape': 'StreamTape',
+             'autorename_format': 'Auto Rename Format',
              }
 
 async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None):
@@ -160,6 +162,10 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         media_group = 'Enabled' if user_dict.get('media_group', config_dict.get('MEDIA_GROUP')) else 'Disabled'
         buttons.ibutton(f"{'✅️' if user_dict.get('split_size') else ''} Leech Splits", f"userset {user_id} split_size")
 
+        autorename_status = "Enabled" if user_dict.get('autorename', False) else "Disabled"
+        autorename_format = 'Not Exists' if (val:=user_dict.get('autorename_format', '')) == '' else val
+        buttons.ibutton(f"{'✅️' if autorename_status == 'Enabled' else ''} Auto Rename", f"userset {user_id} autorename_format")
+
         lcaption = 'Not Exists' if (val:=user_dict.get('lcaption', config_dict.get('LEECH_FILENAME_CAPTION', ''))) == '' else val
         buttons.ibutton(f"{'✅️' if lcaption != 'Not Exists' else ''} Leech Caption", f"userset {user_id} lcaption")
 
@@ -237,6 +243,12 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             if set_exist != 'Not Exists' and key == "ldump":
                 set_exist = '\n\n' + '\n'.join([f"{index}. <b>{dump}</b> : <code>{ids}</code>" for index, (dump, ids) in enumerate(val.items(), start=1)])
             text += f"➲ <b>Leech Filename {fname_dict[key]} :</b> {set_exist}\n\n"
+        elif key == 'autorename_format':
+            set_exist = 'Not Exists' if (val:=user_dict.get(key, '')) == '' else val
+            auto_status = 'Enabled' if user_dict.get('autorename', False) else 'Disabled'
+            text += f"➲ <b>Auto Rename Status :</b> <i>{auto_status}</i>\n"
+            text += f"➲ <b>Current Format :</b> <code>{escape(set_exist)}</code>\n\n"
+            buttons.ibutton("Disable Auto Rename" if auto_status == 'Enabled' else "Enable Auto Rename", f"userset {user_id} toggle_autorename", "header")
         elif key in ['mprefix', 'mremname', 'msuffix']:
             set_exist = 'Not Exists' if (val:=user_dict.get(key, config_dict.get(f'MIRROR_FILENAME_{key[1:].upper()}', ''))) == '' else val
             text += f"➲ <b>Mirror Filename {fname_dict[key]} :</b> {set_exist}\n\n"
@@ -286,7 +298,7 @@ async def user_settings(client, message):
         if set_arg and (reply_to := message.reply_to_message):
             if message.from_user.id != reply_to.from_user.id:
                 return await editMessage(msg, '<i>Reply to Your Own Message for Setting via Args Directly</i>')
-            if set_arg in ['lprefix', 'lsuffix', 'lremname', 'lcaption', 'ldump', 'yt_opt', 'metadata', 'lattachment'] and reply_to.text:
+            if set_arg in ['lprefix', 'lsuffix', 'lremname', 'lcaption', 'ldump', 'yt_opt', 'metadata', 'lattachment', 'autorename_format'] and reply_to.text:
                 return await set_custom(client, reply_to, msg, set_arg, True)
             elif set_arg == 'thumb' and reply_to.media:
                 return await set_thumb(client, reply_to, msg, set_arg, True)
@@ -307,6 +319,8 @@ async def user_settings(client, message):
     /cmd -s metadata
 ➲ <b>Leech Filename Attachment :</b>
     /cmd -s lattachment
+➲ <b>Auto Rename Format :</b>
+    /cmd -s autorename_format
 ➲ <b>YT-DLP Options :</b>
     /cmd -s yt_opt
 ➲ <b>Leech User Dump :</b>
@@ -533,6 +547,13 @@ async def edit_user_settings(client, query):
         await update_user_settings(query, data[2][1:], 'universal')
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
+    elif data[2] == 'toggle_autorename':
+        handler_dict[user_id] = False
+        await query.answer()
+        update_user_ldata(user_id, 'autorename', not user_dict.get('autorename', False))
+        await update_user_settings(query, 'autorename_format', 'leech')
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
     elif data[2] in ['bot_pm', 'mediainfo', 'save_mode', 'td_mode']:
         handler_dict[user_id] = False
         if data[2] == 'save_mode' and not user_dict.get(data[2], False) and not user_dict.get('ldump'):
@@ -624,20 +645,22 @@ async def edit_user_settings(client, query):
         pfunc = partial(set_custom, pre_event=query, key=data[2])
         rfunc = partial(update_user_settings, query, data[2], 'mirror' if data[2] in ['ddl_servers', 'user_tds'] else "ddl_servers")
         await event_handler(client, query, pfunc, rfunc)
-    elif data[2] in ['lprefix', 'lsuffix', 'lremname', 'lcaption', 'ldump', 'mprefix', 'msuffix', 'mremname', 'metadata', 'lattachment']:
+    elif data[2] in ['lprefix', 'lsuffix', 'lremname', 'lcaption', 'ldump', 'mprefix', 'msuffix', 'mremname', 'metadata', 'lattachment', 'autorename_format']:
         handler_dict[user_id] = False
         await query.answer()
         edit_mode = len(data) == 4
-        return_key = 'leech' if data[2][0] == 'l' else 'mirror'
+        return_key = 'leech' if data[2][0] in ['l', 'a'] else 'mirror'
         await update_user_settings(query, data[2], return_key, edit_mode)
         if not edit_mode: return
         pfunc = partial(set_custom, pre_event=query, key=data[2])
         rfunc = partial(update_user_settings, query, data[2], return_key)
         await event_handler(client, query, pfunc, rfunc)
-    elif data[2] in ['dlprefix', 'dlsuffix', 'dlremname', 'dlcaption', 'dldump', 'dmetadata', 'dlattachment']:
+    elif data[2] in ['dlprefix', 'dlsuffix', 'dlremname', 'dlcaption', 'dldump', 'dmetadata', 'dlattachment', 'dautorename_format']:
         handler_dict[user_id] = False
         await query.answer()
         update_user_ldata(user_id, data[2][1:], {} if data[2] == 'dldump' else '')
+        if data[2] == 'dautorename_format':
+            update_user_ldata(user_id, 'autorename', False)
         await update_user_settings(query, data[2][1:], 'leech')
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
