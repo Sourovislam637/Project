@@ -49,7 +49,7 @@ desp_dict = {'rcc': ['RClone is a command-line program to sync files and directo
             'user_tds': [f'UserTD helps to Upload files via Bot to your Custom Drive Destination via Global SA mail\n\n➲ <b>SA Mail :</b> {"Not Specified" if "USER_TD_SA" not in config_dict else config_dict["USER_TD_SA"]}', 'Send User TD details for Use while Mirror/Clone\n➲ <b>Format:</b>\nname id/link index(optional)\nname2 link2/id2 index(optional)\n\n<b>NOTE:</b>\n<i>1. Drive ID must be valid, then only it will accept\n2. Names can have spaces\n3. All UserTDs are updated on every change\n4. To delete specific UserTD, give Name(s) separated by each line</i>\n\n<b>Timeout:</b> 60 sec'],
             'gofile': ['Gofile is a free file sharing and storage platform. You can store and share your content without any limit.', "Send GoFile's API Key. Get it on https://gofile.io/myProfile, It will not be Accepted if the API Key is Invalid !!\n<b>Timeout:</b> 60 sec"],
             'streamtape': ['Streamtape is free Video Streaming & sharing Hoster', "Send StreamTape's Login and Key\n<b>Format:</b> <code>user_login:pass_key</code>\n<b>Timeout:</b> 60 sec"],
-            'autorename_format': ['Auto Rename changes the filename automatically based on a predefined format.', 'Send your Auto Rename Format.\nAvailable Tags: <code>{title}</code>, <code>{season}</code>, <code>{episode}</code>, <code>{quality}</code>, <code>{codec}</code>, <code>{audio}</code>, <code>{sub}</code>\nExample: <code>{title} - {season}{episode} - {quality}</code>\n<b>Timeout:</b> 60 sec'],
+            'autorename_format': ['Auto Rename changes the filename automatically based on a predefined format.', 'Send your Auto Rename Format.\nAvailable Tags: <code>{title}</code>, <code>{season}</code>, <code>{episode}</code>, <code>{quality}</code>, <code>{codec}</code>, <code>{audio}</code>, <code>{sub}</code>, <code>{size}</code>, <code>{language}</code>\nExample: <code>{title} - {season}{episode} - {quality} [{size}]</code>\n<b>Timeout:</b> 60 sec'],
             }
 fname_dict = {'rcc': 'RClone',
              'lprefix': 'Prefix',
@@ -212,7 +212,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         text += f"➲ <b>Status :</b> <i>{auto_status}</i>\n"
         text += f"➲ <b>Current Format :</b> <code>{escape(trun(format_str, 60))}</code>\n"
         text += f"➲ <b>Custom Title :</b> <code>{escape(trun(custom_title, 60))}</code>\n\n"
-        text += f"➲ <b>Available Tags :</b> <code>{{title}}</code>, <code>{{season}}</code>, <code>{{episode}}</code>, <code>{{quality}}</code>, <code>{{codec}}</code>, <code>{{audio}}</code>, <code>{{sub}}</code>\n\n"
+        text += f"➲ <b>Available Tags :</b> <code>{{title}}</code>, <code>{{season}}</code>, <code>{{episode}}</code>, <code>{{quality}}</code>, <code>{{codec}}</code>, <code>{{audio}}</code>, <code>{{sub}}</code>, <code>{{size}}</code>, <code>{{language}}</code>\n\n"
         text += f"➲ <b>Description :</b> <i>Set your Custom Format and Title for Auto Renaming files. Custom Title will override {{title}}.</i>"
 
         buttons.ibutton("Disable" if auto_status == 'Enabled' else "Enable", f"userset {user_id} toggle_autorename")
@@ -283,7 +283,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             name_str = "Auto Rename Format" if key == 'autorename_format' else "Custom Title"
             text += f"➲ <b>{name_str} :</b> <code>{escape(trun(set_exist, 600))}</code>\n\n"
             if key == 'autorename_format':
-                text += f"➲ <b>Available Tags :</b> <code>{{title}}</code>, <code>{{season}}</code>, <code>{{episode}}</code>, <code>{{quality}}</code>, <code>{{codec}}</code>, <code>{{audio}}</code>, <code>{{sub}}</code>\n"
+                text += f"➲ <b>Available Tags :</b> <code>{{title}}</code>, <code>{{season}}</code>, <code>{{episode}}</code>, <code>{{quality}}</code>, <code>{{codec}}</code>, <code>{{audio}}</code>, <code>{{sub}}</code>, <code>{{size}}</code>, <code>{{language}}</code>\n"
                 text += f"➲ <b>Description :</b> <i>{desp_dict['autorename_format'][1]}</i>"
             else:
                 text += f"➲ <b>Description :</b> <i>Set a Custom Title to replace {{title}} in your Auto Rename format. E.g., Anime Name or Movie Name.</i>"
