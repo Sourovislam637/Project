@@ -3,10 +3,10 @@ import re
 import os
 from bot import user_data, LOGGER
 
-def get_autorename(filename, user_id):
+def get_autorename(filename, user_id, size="", media_quality="", lang="", subs=""):
     """
     Advanced Auto Rename Logic: Cleans the filename and applies user format.
-    Available Tags: {title}, {season}, {episode}, {quality}, {codec}, {audio}, {sub}
+    Available Tags: {title}, {season}, {episode}, {quality}, {codec}, {audio}, {sub}, {size}, {language}
     """
     user_dict = user_data.get(user_id, {})
     
@@ -21,7 +21,7 @@ def get_autorename(filename, user_id):
 
     name, ext = os.path.splitext(filename)
 
-    # তথ্য বের করা (Extracting metadata via Advanced Regex)
+    # তথ্য বের করা (Extracting metadata via Advanced Regex & Provided Info)
     season_match = re.search(r'(S\d{1,2}|Season\s*\d{1,2})', name, re.IGNORECASE)
     season = season_match.group(1).upper() if season_match else ""
 
@@ -29,16 +29,16 @@ def get_autorename(filename, user_id):
     episode = episode_match.group(1).upper() if episode_match else ""
 
     quality_match = re.search(r'(480p|720p|1080p|1440p|2160p|4K)', name, re.IGNORECASE)
-    quality = quality_match.group(1) if quality_match else ""
+    quality = quality_match.group(1) if quality_match else media_quality
     
     codec_match = re.search(r'(x264|x265|HEVC|AV1|H264|H265|10bit|10Bit)', name, re.IGNORECASE)
     codec = codec_match.group(1) if codec_match else ""
     
     audio_match = re.search(r'(Dual[\s\-]?Audio|Multi[\s\-]?Audio|Hindi|English|Tamil|Telugu|Malayalam|Kannada|Bengali)', name, re.IGNORECASE)
-    audio = audio_match.group(1).title() if audio_match else ""
+    audio = audio_match.group(1).title() if audio_match else lang
     
     sub_match = re.search(r'(ESub|HC-ENG|MSub|Multi[\s\-]?Sub)', name, re.IGNORECASE)
-    sub = sub_match.group(1) if sub_match else ""
+    sub = sub_match.group(1) if sub_match else subs
 
     # ফাইলের নাম পরিষ্কার করা (Cleaning the Original Name)
     clean_title = re.sub(r'\[.*?\]|\(.*?\)', '', name) 
@@ -58,7 +58,9 @@ def get_autorename(filename, user_id):
             quality=quality,
             codec=codec,
             audio=audio,
-            sub=sub
+            sub=sub,
+            size=size,
+            language=lang
         )
         
         # তৈরি হওয়া এক্সট্রা স্পেস, ড্যাশ বা ডট ক্লিন করা (Safeguard)
