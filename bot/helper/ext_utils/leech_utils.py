@@ -243,24 +243,30 @@ async def split_file(path, size, file_, dirpath, split_size, listener, start_tim
     return True
 
 async def format_filename(file_, user_id, dirpath=None, isMirror=False):
+    orig_file = file_
+    up_path = ospath.join(dirpath, orig_file) if dirpath else None
+    
+    # Extract meta info once to feed both autorename and caption dynamically
+    dur, qual, lang, subs = 0, "", "", ""
+    fsize = ""
+    if up_path and await aiopath.exists(up_path):
+        fsize = get_readable_file_size(await aiopath.getsize(up_path))
+        dur, qual, lang, subs = await get_media_info(up_path, True)
+
     if not isMirror:
-        file_ = get_autorename(file_, user_id)
+        file_ = get_autorename(file_, user_id, size=fsize, media_quality=qual, lang=lang, subs=subs)
 
     user_dict = user_data.get(user_id, {})
     ftag, ctag = ('m', 'MIRROR') if isMirror else ('l', 'LEECH')
-    prefix = config_dict[f'{ctag}_FILENAME_PREFIX'] if (val:=user_dict.get(f'{ftag}prefix', '')) == '' else val
-    remname = config_dict[f'{ctag}_FILENAME_REMNAME'] if (val:=user_dict.get(f'{ftag}remname', '')) == '' else val
-    suffix = config_dict[f'{ctag}_FILENAME_SUFFIX'] if (val:=user_dict.get(f'{ftag}suffix', '')) == '' else val
-    lcaption = config_dict['LEECH_FILENAME_CAPTION'] if (val:=user_dict.get('lcaption', '')) == '' else val
+    prefix = config_dict.get(f'{ctag}_FILENAME_PREFIX', '') if (val:=user_dict.get(f'{ftag}prefix', '')) == '' else val
+    remname = config_dict.get(f'{ctag}_FILENAME_REMNAME', '') if (val:=user_dict.get(f'{ftag}remname', '')) == '' else val
+    suffix = config_dict.get(f'{ctag}_FILENAME_SUFFIX', '') if (val:=user_dict.get(f'{ftag}suffix', '')) == '' else val
+    lcaption = config_dict.get('LEECH_FILENAME_CAPTION', '') if (val:=user_dict.get('lcaption', '')) == '' else val
  
-    prefile_ = file_
-    #file_ = re_sub(r'www\S+', '', file_)
-    
     # Remove URLs starting with "www"
     file_ = re_sub(r'www\S+', '', file_, flags=IGNORECASE)
 
     # Remove leading/trailing dashes and extra spaces
-    # file_ = re_sub(r'^\s*-\s*', '', file_)
     file_ = re_sub(r'(^\s*-\s*|(\s*-\s*){2,})', '', file_)
         
     if remname:
@@ -283,9 +289,9 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False):
     nfile_ = file_
     if prefix:
         nfile_ = prefix.replace('\s', ' ') + file_
-        prefix = re_sub(r'<.*?>', '', prefix).replace('\s', ' ')
-        if not file_.startswith(prefix):
-            file_ = f"{prefix}{file_}"
+        prefix_clean = re_sub(r'<.*?>', '', prefix).replace('\s', ' ')
+        if not file_.startswith(prefix_clean):
+            file_ = f"{prefix_clean}{file_}"
 
     if suffix and not isMirror:
         suffix = suffix.replace('\s', ' ')
@@ -305,26 +311,25 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False):
         suffix = suffix.replace('\s', ' ')
         file_ = f"{ospath.splitext(file_)[0]}{suffix}{ospath.splitext(file_)[1]}" if '.' in file_ else f"{file_}{suffix}"
 
-
-    cap_mono =  f"<{config_dict['CAP_FONT']}>{nfile_}</{config_dict['CAP_FONT']}>" if config_dict['CAP_FONT'] else nfile_
+    cap_font = config_dict.get('CAP_FONT', '')
+    cap_mono = f"<{cap_font}>{nfile_}</{cap_font}>" if cap_font else nfile_
+    
     if lcaption and dirpath and not isMirror:
-        
         def lowerVars(match):
             return f"{{{match.group(1).lower()}}}"
 
         lcaption = lcaption.replace('\|', '%%').replace('\{', '&%&').replace('\}', '$%$').replace('\s', ' ')
         slit = lcaption.split("|")
         slit[0] = re_sub(r'\{([^}]+)\}', lowerVars, slit[0])
-        up_path = ospath.join(dirpath, prefile_)
-        dur, qual, lang, subs = await get_media_info(up_path, True)
+        
         cap_mono = slit[0].format(
             filename = nfile_,
-            size = get_readable_file_size(await aiopath.getsize(up_path)),
+            size = fsize,
             duration = get_readable_time(dur),
             quality = qual,
             languages = lang,
             subtitles = subs,
-            md5_hash = get_md5_hash(up_path)
+            md5_hash = get_md5_hash(up_path) if up_path and await aiopath.exists(up_path) else ""
         )
         if len(slit) > 1:
             for rep in range(1, len(slit)):
@@ -336,6 +341,7 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False):
                 elif len(args) == 1:
                     cap_mono = cap_mono.replace(args[0], '')
         cap_mono = cap_mono.replace('%%', '|').replace('&%&', '{').replace('$%$', '}')
+        
     return file_, cap_mono
 
 
