@@ -25,6 +25,10 @@ from bot.helper.ext_utils.bot_utils import getdailytasks, update_user_ldata, get
 from bot.helper.mirror_utils.upload_utils.ddlserver.gofile import Gofile
 from bot.helper.themes import BotTheme
 
+def trun(text, limit=60):
+    text = str(text)
+    return text[:limit] + "..." if len(text) > limit else text
+
 handler_dict = {}
 desp_dict = {'rcc': ['RClone is a command-line program to sync files and directories to and from different cloud storage providers like GDrive, OneDrive...', 'Send rclone.conf. \n<b>Timeout:</b> 60 sec'],
             'lprefix': ['Leech Filename Prefix is the Front Part attacted with the Filename of the Leech Files.', 'Send Leech Filename Prefix. Documentation Here : <a href="https://t.me/Rare_Leech_Mirror_Hub/5">Click Me</a> \n<b>Timeout:</b> 60 sec'],
@@ -109,7 +113,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             lastused = f"{t[0]}h {t[1]}m {t[2].split('.')[0]}s ago"
         else: lastused = "Bot Not Used yet.."
 
-        text = BotTheme('UNIVERSAL', NAME=name, YT=escape(ytopt), DT=f"{dailytas} / {dailytl}", LAST_USED=lastused, BOT_PM=bot_pm, MEDIAINFO=mediainfo, SAVE_MODE=save_mode, USESS=u_sess)
+        text = BotTheme('UNIVERSAL', NAME=name, YT=escape(trun(ytopt)), DT=f"{dailytas} / {dailytl}", LAST_USED=lastused, BOT_PM=bot_pm, MEDIAINFO=mediainfo, SAVE_MODE=save_mode, USESS=u_sess)
         buttons.ibutton("Back", f"userset {user_id} back", "footer")
         buttons.ibutton("Close", f"userset {user_id} close", "footer")
         button = buttons.build_menu(2)
@@ -137,8 +141,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         user_tds = len(val) if (val := user_dict.get('user_tds', False)) else 0
         buttons.ibutton("User TDs", f"userset {user_id} user_tds")
 
-        text = BotTheme('MIRROR', NAME=name, RCLONE=rccmsg, DDL_SERVER=ddl_serv, DM=f"{dailyup} / {dailytlup}", MREMNAME=escape(mremname), MPREFIX=escape(mprefix),
-                MSUFFIX=escape(msuffix), TMODE=tds_mode, USERTD=user_tds)
+        text = BotTheme('MIRROR', NAME=name, RCLONE=rccmsg, DDL_SERVER=ddl_serv, DM=f"{dailyup} / {dailytlup}", MREMNAME=escape(trun(mremname)), MPREFIX=escape(trun(mprefix)),
+                MSUFFIX=escape(trun(msuffix)), TMODE=tds_mode, USERTD=user_tds)
 
         buttons.ibutton("Back", f"userset {user_id} back", "footer")
         buttons.ibutton("Close", f"userset {user_id} close", "footer")
@@ -190,10 +194,10 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         text = BotTheme('LEECH', NAME=name, DL=f"{dailyll} / {dailytlle}",
                 LTYPE=ltype, THUMB=thumbmsg, SPLIT_SIZE=split_size,
                 EQUAL_SPLIT=equal_splits, MEDIA_GROUP=media_group,
-                LCAPTION=escape(lcaption), LPREFIX=escape(lprefix),
-                LSUFFIX=escape(lsuffix), LREMNAME=escape(lremname), 
-                LDUMP=ldump, METADATA=escape(metadata),
-                ATTACHMENT=escape(lattachment))
+                LCAPTION=escape(trun(lcaption)), LPREFIX=escape(trun(lprefix)),
+                LSUFFIX=escape(trun(lsuffix)), LREMNAME=escape(trun(lremname)), 
+                LDUMP=ldump, METADATA=escape(trun(metadata)),
+                ATTACHMENT=escape(trun(lattachment)))
 
         buttons.ibutton("Back", f"userset {user_id} back", "footer")
         buttons.ibutton("Close", f"userset {user_id} close", "footer")
@@ -223,7 +227,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             text += f"➲ <b>Custom Thumbnail :</b> <i>{'' if set_exist else 'Not'} Exists</i>\n\n"
         elif key == 'yt_opt':
             set_exist = 'Not Exists' if (val:=user_dict.get('yt_opt', config_dict.get('YT_DLP_OPTIONS', ''))) == '' else val
-            text += f"➲ <b>YT-DLP Options :</b> <code>{escape(set_exist)}</code>\n\n"
+            text += f"➲ <b>YT-DLP Options :</b> <code>{escape(trun(set_exist, 600))}</code>\n\n"
         elif key == 'usess':
             set_exist = 'Exists' if user_dict.get('usess') else 'Not Exists'
             text += f"➲ <b>{fname_dict[key]} :</b> <code>{set_exist}</code>\n➲ <b>Encryption :</b> {'🔐' if set_exist else '🔓'}\n\n"
@@ -241,17 +245,23 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         elif key in ['lprefix', 'lremname', 'lsuffix', 'lcaption', 'ldump', 'metadata', 'lattachment']:
             set_exist = 'Not Exists' if (val:=user_dict.get(key, config_dict.get(f'LEECH_FILENAME_{key[1:].upper()}', ''))) == '' else val
             if set_exist != 'Not Exists' and key == "ldump":
-                set_exist = '\n\n' + '\n'.join([f"{index}. <b>{dump}</b> : <code>{ids}</code>" for index, (dump, ids) in enumerate(val.items(), start=1)])
-            text += f"➲ <b>Leech Filename {fname_dict[key]} :</b> {set_exist}\n\n"
+                dump_items = [f"{index}. <b>{dump}</b> : <code>{ids}</code>" for index, (dump, ids) in enumerate(val.items(), start=1)]
+                if len(dump_items) > 10:
+                    set_exist = '\n\n' + '\n'.join(dump_items[:10]) + f"\n\n<i>... and {len(dump_items) - 10} more</i>"
+                else:
+                    set_exist = '\n\n' + '\n'.join(dump_items)
+                text += f"➲ <b>Leech Filename {fname_dict[key]} :</b> {set_exist}\n\n"
+            else:
+                text += f"➲ <b>Leech Filename {fname_dict[key]} :</b> {escape(trun(set_exist, 600))}\n\n"
         elif key == 'autorename_format':
             set_exist = 'Not Exists' if (val:=user_dict.get(key, '')) == '' else val
             auto_status = 'Enabled' if user_dict.get('autorename', False) else 'Disabled'
             text += f"➲ <b>Auto Rename Status :</b> <i>{auto_status}</i>\n"
-            text += f"➲ <b>Current Format :</b> <code>{escape(set_exist)}</code>\n\n"
+            text += f"➲ <b>Current Format :</b> <code>{escape(trun(set_exist, 600))}</code>\n\n"
             buttons.ibutton("Disable Auto Rename" if auto_status == 'Enabled' else "Enable Auto Rename", f"userset {user_id} toggle_autorename", "header")
         elif key in ['mprefix', 'mremname', 'msuffix']:
             set_exist = 'Not Exists' if (val:=user_dict.get(key, config_dict.get(f'MIRROR_FILENAME_{key[1:].upper()}', ''))) == '' else val
-            text += f"➲ <b>Mirror Filename {fname_dict[key]} :</b> {set_exist}\n\n"
+            text += f"➲ <b>Mirror Filename {fname_dict[key]} :</b> {escape(trun(set_exist, 600))}\n\n"
         elif key in ['gofile', 'streamtape']:
             set_exist = 'Exists' if key in (ddl_dict:=user_dict.get('ddl_servers', {})) and ddl_dict[key][1] and ddl_dict[key][1] != '' else 'Not Exists'
             ddl_mode = 'Enabled' if key in (ddl_dict:=user_dict.get('ddl_servers', {})) and ddl_dict[key][0] else 'Disabled'
