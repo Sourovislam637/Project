@@ -15,37 +15,38 @@ def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="
         return filename
 
     # Default format set
-    format_str = user_dict.get('autorename_format', '{title} {season} {episode} {quality} {codec} {audio} {sub}')
+    format_str = user_dict.get('autorename_format', '{title} - S{season}E{episode} - {quality} {codec} {audio} {sub}')
     if not format_str:
-        format_str = '{title} {season} {episode} {quality}'
+        format_str = '{title} - S{season}E{episode} - {quality}'
 
     name, ext = os.path.splitext(filename)
 
-    # তথ্য বের করা (Extracting metadata via Advanced Regex & Provided Info)
-    season_match = re.search(r'(S\d{1,2}|Season\s*\d{1,2})', name, re.IGNORECASE)
-    season = season_match.group(1).upper() if season_match else ""
+    # তথ্য বের করা (শুধুমাত্র সংখ্যা বের করা হবে যাতে S{season}E{episode} কাস্টমাইজ করা যায়)
+    season_match = re.search(r'(?:S|Season\s*)(\d{1,2})', name, re.IGNORECASE)
+    season = season_match.group(1).zfill(2) if season_match else ""
 
-    episode_match = re.search(r'(E\d{1,3}|Ep\s*\d{1,3}|Episode\s*\d{1,3})', name, re.IGNORECASE)
-    episode = episode_match.group(1).upper() if episode_match else ""
+    episode_match = re.search(r'(?:E|Ep|Episode\s*)(\d{1,3})', name, re.IGNORECASE)
+    episode = episode_match.group(1).zfill(2) if episode_match else ""
 
     quality_match = re.search(r'(480p|720p|1080p|1440p|2160p|4K)', name, re.IGNORECASE)
     quality = quality_match.group(1) if quality_match else media_quality
     
-    codec_match = re.search(r'(x264|x265|HEVC|AV1|H264|H265|10bit|10Bit)', name, re.IGNORECASE)
+    codec_match = re.search(r'(x264|x265|HEVC|AV1|H264|H265|10bit|10Bit|AVC)', name, re.IGNORECASE)
     codec = codec_match.group(1) if codec_match else ""
     
     audio_match = re.search(r'(Dual[\s\-]?Audio|Multi[\s\-]?Audio|Hindi|English|Tamil|Telugu|Malayalam|Kannada|Bengali)', name, re.IGNORECASE)
     audio = audio_match.group(1).title() if audio_match else lang
     
-    sub_match = re.search(r'(ESub|HC-ENG|MSub|Multi[\s\-]?Sub)', name, re.IGNORECASE)
+    sub_match = re.search(r'(ESub|HC-ENG|MSub|Multi[\s\-]?Sub|Subbed)', name, re.IGNORECASE)
     sub = sub_match.group(1) if sub_match else subs
 
-    # ফাইলের নাম পরিষ্কার করা (Cleaning the Original Name)
+    # ফাইলের নাম পরিষ্কার করা (Cleaning the Original Name & Brackets)
     clean_title = re.sub(r'\[.*?\]|\(.*?\)', '', name) 
-    clean_title = re.sub(r'(S\d{1,2}|E\d{1,3}|Ep\s*\d{1,3}|Episode\s*\d{1,3}|480p|720p|1080p|1440p|2160p|4K|x264|x265|HEVC|AV1|H264|H265|10bit|10Bit|BluRay|WEB-DL|WEBRip|HDRip|HDTV|Dual[\s\-]?Audio|Multi[\s\-]?Audio|Hindi|English|Tamil|Telugu|Malayalam|Kannada|Bengali|ESub|HC-ENG|MSub|Multi[\s\-]?Sub|Audio)', '', clean_title, flags=re.IGNORECASE)
+    noise_pattern = r'(S\d{1,2}|E\d{1,3}|Ep\s*\d{1,3}|Episode\s*\d{1,3}|480p|720p|1080p|1440p|2160p|4K|x264|x265|HEVC|AV1|H264|H265|10bit|10Bit|AVC|BluRay|WEB-DL|WEBRip|HDRip|HDTV|Dual[\s\-]?Audio|Multi[\s\-]?Audio|Hindi|English|Tamil|Telugu|Malayalam|Kannada|Bengali|ESub|HC-ENG|MSub|Multi[\s\-]?Sub|Subbed|Audio)'
+    clean_title = re.sub(noise_pattern, '', clean_title, flags=re.IGNORECASE)
     clean_title = re.sub(r'(\s|-|\.)+', ' ', clean_title).strip() 
 
-    # ইউজারের Custom Title চেক করা (Future Analysis Fix)
+    # ইউজারের Custom Title চেক করা
     custom_title = user_dict.get('custom_title', '')
     final_title = custom_title if custom_title else clean_title
 
@@ -60,9 +61,15 @@ def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="
             audio=audio,
             sub=sub,
             size=size,
-            language=lang
+            language=audio
         )
         
+        # যদি ফাইলে সিজন বা এপিসোড না থাকে, তবে ফাঁকা 'SE' মুছে ফেলা
+        if not season and not episode:
+            new_name = new_name.replace('SE', '').replace('S E', '')
+        elif not season and episode:
+            new_name = new_name.replace('SE', 'E')
+            
         # তৈরি হওয়া এক্সট্রা স্পেস, ড্যাশ বা ডট ক্লিন করা (Safeguard)
         new_name = re.sub(r'\s+', ' ', new_name)
         new_name = re.sub(r'-\s*-', '-', new_name)
@@ -78,4 +85,7 @@ def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="
     
     except KeyError as e:
         LOGGER.error(f"Auto Rename KeyError: Missing tag {e} in user format.")
+        return filename
+    except Exception as e:
+        LOGGER.error(f"Auto Rename Error: {e}")
         return filename
