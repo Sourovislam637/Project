@@ -49,7 +49,7 @@ desp_dict = {'rcc': ['RClone is a command-line program to sync files and directo
             'user_tds': [f'UserTD helps to Upload files via Bot to your Custom Drive Destination via Global SA mail\n\n➲ <b>SA Mail :</b> {"Not Specified" if "USER_TD_SA" not in config_dict else config_dict["USER_TD_SA"]}', 'Send User TD details for Use while Mirror/Clone\n➲ <b>Format:</b>\nname id/link index(optional)\nname2 link2/id2 index(optional)\n\n<b>NOTE:</b>\n<i>1. Drive ID must be valid, then only it will accept\n2. Names can have spaces\n3. All UserTDs are updated on every change\n4. To delete specific UserTD, give Name(s) separated by each line</i>\n\n<b>Timeout:</b> 60 sec'],
             'gofile': ['Gofile is a free file sharing and storage platform. You can store and share your content without any limit.', "Send GoFile's API Key. Get it on https://gofile.io/myProfile, It will not be Accepted if the API Key is Invalid !!\n<b>Timeout:</b> 60 sec"],
             'streamtape': ['Streamtape is free Video Streaming & sharing Hoster', "Send StreamTape's Login and Key\n<b>Format:</b> <code>user_login:pass_key</code>\n<b>Timeout:</b> 60 sec"],
-            'autorename_format': ['Auto Rename changes the filename automatically based on a predefined format.', 'Send your Auto Rename Format.\nAvailable Tags: <code>{title}</code>, <code>{season}</code>, <code>{episode}</code>, <code>{quality}</code>, <code>{codec}</code>, <code>{audio}</code>, <code>{sub}</code>, <code>{size}</code>, <code>{language}</code>\nExample: <code>{title} - {season}{episode} - {quality} [{size}]</code>\n<b>Timeout:</b> 60 sec'],
+            'autorename_format': ['Auto Rename changes the filename automatically based on a predefined format.', 'Send your Auto Rename Format.\nAvailable Tags: <code>{title}</code>, <code>{season}</code>, <code>{episode}</code>, <code>{quality}</code>, <code>{codec}</code>, <code>{audio}</code>, <code>{sub}</code>, <code>{size}</code>, <code>{language}</code>\nExample: <code>{title} - S{season}E{episode} - {quality} [{size}]</code>\n<b>Timeout:</b> 60 sec'],
             }
 fname_dict = {'rcc': 'RClone',
              'lprefix': 'Prefix',
@@ -212,7 +212,8 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         text += f"➲ <b>Status :</b> <i>{auto_status}</i>\n"
         text += f"➲ <b>Current Format :</b> <code>{escape(trun(format_str, 60))}</code>\n"
         text += f"➲ <b>Custom Title :</b> <code>{escape(trun(custom_title, 60))}</code>\n\n"
-        text += f"➲ <b>Available Tags :</b> <code>{{title}}</code>, <code>{{season}}</code>, <code>{{episode}}</code>, <code>{{quality}}</code>, <code>{{codec}}</code>, <code>{{audio}}</code>, <code>{{sub}}</code>, <code>{{size}}</code>, <code>{{language}}</code>\n\n"
+        text += f"➲ <b>Available Tags :</b> <code>{{title}}</code>, <code>{{season}}</code>, <code>{{episode}}</code>, <code>{{quality}}</code>, <code>{{codec}}</code>, <code>{{audio}}</code>, <code>{{sub}}</code>, <code>{{size}}</code>, <code>{{language}}</code>\n"
+        text += f"➲ <b>Format Example :</b> <code>{{title}} - S{{season}}E{{episode}} - {{quality}} [{{size}}]</code>\n\n"
         text += f"➲ <b>Description :</b> <i>Set your Custom Format and Title for Auto Renaming files. Custom Title will override {{title}}.</i>"
 
         buttons.ibutton("Disable" if auto_status == 'Enabled' else "Enable", f"userset {user_id} toggle_autorename")
@@ -284,6 +285,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             text += f"➲ <b>{name_str} :</b> <code>{escape(trun(set_exist, 600))}</code>\n\n"
             if key == 'autorename_format':
                 text += f"➲ <b>Available Tags :</b> <code>{{title}}</code>, <code>{{season}}</code>, <code>{{episode}}</code>, <code>{{quality}}</code>, <code>{{codec}}</code>, <code>{{audio}}</code>, <code>{{sub}}</code>, <code>{{size}}</code>, <code>{{language}}</code>\n"
+                text += f"➲ <b>Format Example :</b> <code>{{title}} - S{{season}}E{{episode}} - {{quality}} [{{size}}]</code>\n"
                 text += f"➲ <b>Description :</b> <i>{desp_dict['autorename_format'][1]}</i>"
             else:
                 text += f"➲ <b>Description :</b> <i>Set a Custom Title to replace {{title}} in your Auto Rename format. E.g., Anime Name or Movie Name.</i>"
@@ -837,9 +839,35 @@ async def send_users_settings(client, message):
     else:
         await sendMessage(message, f'{userid} have not saved anything..')
 
+# থাম্বনেইল সেট করার জন্য নতুন হ্যান্ডলার
+async def set_thumb_cmd(client, message):
+    user_id = message.from_user.id
+    reply = message.reply_to_message
+    if not reply or not reply.photo:
+        return await sendMessage(message, "Reply to a photo with /t to set it as your custom thumbnail.")
+    
+    path = "Thumbnails/"
+    if not await aiopath.isdir(path):
+        await mkdir(path)
+    
+    photo_dir = await message.download(reply.photo.file_id)
+    des_dir = ospath.join(path, f'{user_id}.jpg')
+    
+    # ইমেজ কনভার্ট এবং সেভ করা
+    await sync_to_async(Image.open(photo_dir).convert("RGB").save, des_dir, "JPEG")
+    await aioremove(photo_dir)
+    
+    update_user_ldata(user_id, 'thumb', des_dir)
+    await sendMessage(message, "✅ Custom Thumbnail saved successfully!")
+    
+    if DATABASE_URL:
+        await DbManger().update_user_doc(user_id, 'thumb', des_dir)
 
 bot.add_handler(MessageHandler(send_users_settings, filters=command(
     BotCommands.UsersCommand) & CustomFilters.sudo))
 bot.add_handler(MessageHandler(user_settings, filters=command(
     BotCommands.UserSetCommand) & CustomFilters.authorized_uset))
 bot.add_handler(CallbackQueryHandler(edit_user_settings, filters=regex("^userset")))
+
+# থাম্বনেইল হ্যান্ডলার রেজিস্ট্রেশন
+bot.add_handler(MessageHandler(set_thumb_cmd, filters=command("t") & CustomFilters.authorized_uset))
