@@ -7,6 +7,7 @@ from aiofiles.os import path as aiopath
 from yt_dlp import YoutubeDL
 from functools import partial
 from time import time
+import os
 
 from bot import DOWNLOAD_DIR, bot, categories_dict, config_dict, user_data, LOGGER
 from bot.helper.ext_utils.task_manager import task_utils
@@ -469,7 +470,10 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
     if 'mdisk.me' in link:
         name, link = await _mdisk(link, name)
 
-    options = {'usenetrc': True, 'cookiefile': 'cookies.txt'}
+    options = {'usenetrc': True}
+    if await aiopath.exists('cookies.txt'):
+        options['cookiefile'] = 'cookies.txt'
+        
     if opt:
         yt_opt = opt.split('|')
         for ytopt in yt_opt:
