@@ -5,9 +5,10 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMedi
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from pyrogram.filters import command, regex
 
-# Leech Bot এর নিজস্ব ইম্পোর্টস
+# Leech Bot imports
 from bot import bot, LOGGER
 from bot.helper.telegram_helper.filters import CustomFilters
+from bot.helper.telegram_helper.bot_commands import BotCommands
 
 # TMDB API Key
 TMDB_API_KEY = "4b061466449ce519d5884948a9671e63"
@@ -20,7 +21,7 @@ async def fetch_json(url):
                 if response.status == 200:
                     return await response.json()
     except Exception as e:
-        LOGGER.error(f"TMDB API Fetch Error: {e}")
+        LOGGER.error(f"API Fetch Error: {e}")
     return None
 
 
@@ -59,6 +60,7 @@ async def get_poster_menu(client, message):
             m_type_str = "ᴛᴠ" if media_type == "tv" else "ᴍᴏᴠɪᴇ"
             btn_text = f"{m_icon} {title} ({year}) [{m_type_str}]"
             
+            # Pass short_query to support the Back to Search button
             buttons.append([InlineKeyboardButton(btn_text, callback_data=f"p_menu_{media_type}_{tmdb_id}_{short_query}")])
             
         buttons.append([InlineKeyboardButton("❌ ᴄʟᴏꜱᴇ", callback_data="p_close")])
@@ -154,8 +156,10 @@ async def show_poster_categories(client, callback_query):
         posters = images.get("posters", [])
         logos = images.get("logos", [])
 
+        # Filter: Landscape (with language/text) vs Clean Landscape (No language/textless)
         landscape = [img for img in backdrops if img.get("iso_639_1") not in (None, "xx")]
         landscape.sort(key=lambda x: (0 if x.get("iso_639_1") == 'en' else 1, x.get("iso_639_1", "")))
+        
         clean_landscape = [img for img in backdrops if img.get("iso_639_1") in (None, "xx")]
 
         main_poster_path = details.get('poster_path') or (posters[0]['file_path'] if posters else None)
@@ -320,11 +324,9 @@ async def close_callback(client, callback_query):
 
 
 # --- Handlers Registering ---
-# Leech Bot-এর filter সিস্টেম অনুযায়ী অ্যাড করা হলো
-bot.add_handler(MessageHandler(get_poster_menu, filters=command("poster") & CustomFilters.authorized))
+bot.add_handler(MessageHandler(get_poster_menu, filters=command(BotCommands.PosterCommand) & CustomFilters.authorized))
 bot.add_handler(CallbackQueryHandler(handle_back_to_search, filters=regex(r"^p_search_")))
 bot.add_handler(CallbackQueryHandler(show_poster_categories, filters=regex(r"^p_menu_")))
 bot.add_handler(CallbackQueryHandler(handle_poster_viewer, filters=regex(r"^p_view_")))
 bot.add_handler(CallbackQueryHandler(ignore_callback, filters=regex(r"^p_none$")))
 bot.add_handler(CallbackQueryHandler(close_callback, filters=regex(r"^p_close$")))
-
