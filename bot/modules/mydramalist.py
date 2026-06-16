@@ -30,8 +30,27 @@ async def mydramalist_search(_, message):
                 if resp.status != 200:
                     return await editMessage(temp, "<i>No Results Found</i>, Try Again or Use <b>MyDramaList Link</b>")
                 mdl = await resp.json()
-        for drama in mdl['results']['dramas']:
-            buttons.ibutton(f"🎬 {drama.get('title')} ({drama.get('year')})", f"mdl {user_id} drama {drama.get('slug')}")
+        
+        # Safely extract dramas whether the API returns a List or a Dict
+        dramas = []
+        if isinstance(mdl, dict):
+            dramas = mdl.get('results', {}).get('dramas', [])
+        elif isinstance(mdl, list):
+            dramas = mdl
+            
+        if not dramas:
+            return await editMessage(temp, "<i>No Results Found</i>, Try Again or Use <b>MyDramaList Link</b>")
+
+        for drama in dramas:
+            if not isinstance(drama, dict):
+                continue
+            d_title = drama.get('title')
+            d_slug = drama.get('slug')
+            d_year = drama.get('year', 'N/A')
+            
+            if d_title and d_slug:
+                buttons.ibutton(f"🎬 {d_title} ({d_year})", f"mdl {user_id} drama {d_slug}")
+                
         buttons.ibutton("🚫 Close 🚫", f"mdl {user_id} close")
         await editMessage(temp, '<b><i>Dramas found on MyDramaList :</i></b>', buttons.build_menu(1))
     else:
