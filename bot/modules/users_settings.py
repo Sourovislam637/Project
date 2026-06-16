@@ -935,6 +935,7 @@ async def send_users_settings(client, message):
 async def set_thumb_cmd(client, message):
     user_id = message.from_user.id
     reply = message.reply_to_message
+    
     if not reply or not reply.photo:
         return await sendMessage(message, "Reply to a photo with /t to set it as your custom thumbnail.")
     
@@ -942,7 +943,8 @@ async def set_thumb_cmd(client, message):
     if not await aiopath.isdir(path):
         await mkdir(path)
     
-    photo_dir = await message.download(reply.photo.file_id)
+    photo_dir = await client.download_media(reply)
+    
     des_dir = ospath.join(path, f'{user_id}.jpg')
     
     await sync_to_async(Image.open(photo_dir).convert("RGB").save, des_dir, "JPEG")
@@ -953,6 +955,7 @@ async def set_thumb_cmd(client, message):
     
     if DATABASE_URL:
         await DbManger().update_user_doc(user_id, 'thumb', des_dir)
+
 
 bot.add_handler(MessageHandler(send_users_settings, filters=command(
     BotCommands.UsersCommand) & CustomFilters.sudo))
