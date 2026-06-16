@@ -29,6 +29,16 @@ def trun(text, limit=60):
     text = str(text)
     return text[:limit] + "..." if len(text) > limit else text
 
+def parse_metadata_str(string):
+    d = {}
+    if not string: return d
+    pairs = string.split('|')
+    for pair in pairs:
+        if ':' in pair:
+            k, v = pair.split(':', 1)
+            d[k.strip()] = v.strip()
+    return d
+
 handler_dict = {}
 desp_dict = {'rcc': ['RClone is a command-line program to sync files and directories to and from different cloud storage providers like GDrive, OneDrive...', 'Send rclone.conf. \n<b>Timeout:</b> 60 sec'],
             'lprefix': ['Leech Filename Prefix is the Front Part attacted with the Filename of the Leech Files.', 'Send Leech Filename Prefix. Documentation Here : <a href="https://t.me/Rare_Leech_Mirror_Hub/5">Click Me</a> \n<b>Timeout:</b> 60 sec'],
@@ -36,7 +46,7 @@ desp_dict = {'rcc': ['RClone is a command-line program to sync files and directo
             'lremname': ['Leech Filename Remname is combination of Regex(s) used for removing or manipulating Filename of the Leech Files', 'Send Leech Filename Remname. Documentation Here : <a href="https://t.me/Rare_Leech_Mirror_Hub/5">Click Me</a> \n<b>Timeout:</b> 60 sec'],
             'lcaption': ['Leech Caption is the Custom Caption on the Leech Files Uploaded by the bot', 'Send Leech Caption. You can add HTML tags. Documentation Here : <a href="https://t.me/Rare_Leech_Mirror_Hub/5">Click Me</a> \n<b>Timeout:</b> 60 sec'],
             'ldump': ['Leech Files User Dump for Personal Use as a Storage.', 'Send Leech Dump Channel ID\n➲ <b>Format:</b> \ntitle chat_id/@username\ntitle2 chat_id2/@username2. \n\n<b>NOTE:</b>Make Bot Admin in the Channel else it will not accept\n<b>Timeout:</b> 60 sec'],
-            'metadata': ['Set multiple metadata fields to inject into media files.', 'Send File Metadata in this format: \n<b>Key:Value|Key:Value</b>\nExample: <code>Title:My Movie|Author:Admin|Year:2026</code>\n<b>Timeout:</b> 60 sec'],
+            'metadata': ['Your channel name that should be used while editing metadata of the file', 'Configure multi metadata properties dynamically using grid manager.'],
             'lattachment': ['Attachment url, it will added in mkv as thumbnail or cover photo, whetever you say.', 'Send Telegraph photo url\n\n<b>Timeout:</b> 60 sec'],
             'mprefix': ['Mirror Filename Prefix is the Front Part attacted with the Filename of the Mirrored/Cloned Files.', 'Send Mirror Filename Prefix. \n<b>Timeout:</b> 60 sec'],
             'msuffix': ['Mirror Filename Suffix is the End Part attached with the Filename of the Mirrored/Cloned Files', 'Send Mirror Filename Suffix. \n<b>Timeout:</b> 60 sec'],
@@ -197,46 +207,33 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
                 EQUAL_SPLIT=equal_splits, MEDIA_GROUP=media_group,
                 LCAPTION=escape(trun(lcaption)), LPREFIX=escape(trun(lprefix)),
                 LSUFFIX=escape(trun(lsuffix)), LREMNAME=escape(trun(lremname)), 
-                LDUMP=ldump, METADATA='Configured' if metadata != 'Not Exists' else 'Not Exists',
+                LDUMP=ldump, METADATA=escape(trun(metadata)),
                 ATTACHMENT=escape(trun(lattachment)))
 
         buttons.ibutton("Back", f"userset {user_id} back", "footer")
         buttons.ibutton("Close", f"userset {user_id} close", "footer")
         button = buttons.build_menu(2)
-    elif key == 'metadata':
-        meta_str = user_dict.get('metadata', config_dict.get('METADATA', ''))
-        
-        meta_dict = {}
-        if meta_str:
-            if '|' in meta_str or ':' in meta_str:
-                for pair in meta_str.split('|'):
-                    if ':' in pair:
-                        k, v = pair.split(':', 1)
-                        meta_dict[k.strip().title()] = v.strip()
-            else:
-                meta_dict['Title'] = meta_str
-                
-        text = f"㊂ <b><u>Multi-Metadata Settings :</u></b>\n\n"
+    elif key == 'metadata_menu':
+        meta_str = user_dict.get('metadata', '')
+        meta_dict = parse_metadata_str(meta_str)
+        text = "㊂ <b><u>Leech Metadata Configurator :</u></b>\n\n"
         if meta_dict:
-            text += "<b>Current Setup :</b>\n"
             for k, v in meta_dict.items():
-                text += f"➲ <b>{k} :</b> <code>{escape(trun(v, 40))}</code>\n"
+                text += f"➲ <b>{k}:</b> <code>{escape(v)}</code>\n"
         else:
-            text += "➲ <b>Current Metadata :</b> <i>Not Exists</i>\n"
+            text += "➲ <i>No custom metadata configured yet. Default values will be used.</i>"
+        text += "\n<i>Click on any field below to modify its value manually:</i>"
         
-        text += "\n<i>Click on any button below to set specific metadata, or use 'Set All Metadata' to paste a formatted string.</i>"
-
-        buttons.ibutton("Set All Metadata", f"userset {user_id} mset all")
-        buttons.ibutton("Clear All", f"userset {user_id} mclear all", "header")
-        
-        meta_keys = ['Title', 'Author', 'Artist', 'Audio', 'Subtitle', 'Video', 'Encoded By', 'Custom Tag', 'Comment', 'Dubbed By', 'Channel', 'Website', 'Copyright', 'Publisher', 'Encoder', 'Source', 'Studio']
-        
-        for k in meta_keys:
-            buttons.ibutton(f"{'✅️ ' if k in meta_dict else ''}{k}", f"userset {user_id} mset {k}")
-        
+        meta_keys = ["Title", "Author", "Artist", "Audio", "Subtitle", "Video", "Encoded By", "Custom Tag", "Comment", "Dubbed By", "Channel", "Website", "Copyright", "Publisher", "Encoder", "Source", "Studio"]
+        for index, mkey in enumerate(meta_keys):
+            has_val = "✅ " if mkey in meta_dict else "❌ "
+            buttons.ibutton(f"{has_val}{mkey}", f"userset {user_id} md_edit {index}")
+            
+        buttons.ibutton("✨ Set All Metadata", f"userset {user_id} md_set_all", "header")
+        buttons.ibutton("↻ Clear All", f"userset {user_id} md_clear_all", "header")
         buttons.ibutton("Back", f"userset {user_id} back leech", "footer")
         buttons.ibutton("Close", f"userset {user_id} close", "footer")
-        button = buttons.build_menu(3)
+        button = buttons.build_menu(2)
     elif key == 'autorename':
         auto_status = 'Enabled' if user_dict.get('autorename', False) else 'Disabled'
         format_str = user_dict.get('autorename_format', 'Not Exists')
@@ -259,7 +256,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         if custom_title != 'Not Exists':
             buttons.ibutton("↻ Delete Title", f"userset {user_id} dcustom_title")
         
-        buttons.ibutton("Back", f"userset {user_id} back leech", "footer")
+        buttons.ibutton("Back", f"userset {user_id} back autorename", "footer")
         buttons.ibutton("Close", f"userset {user_id} close", "footer")
         button = buttons.build_menu(2)
     elif key == "ddl_servers":
@@ -278,7 +275,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         buttons.ibutton("Close", f"userset {user_id} close", "footer")
         button = buttons.build_menu(2)
     elif edit_type:
-        text = f"㊂ <b><u>{fname_dict[key] if key in fname_dict else 'Metadata'} Settings :</u></b>\n\n"
+        text = f"㊂ <b><u>{fname_dict[key]} Settings :</u></b>\n\n"
         if key == 'rcc':
             set_exist = await aiopath.exists(rclone_path)
             text += f"➲ <b>RClone.Conf File :</b> <i>{'' if set_exist else 'Not'} Exists</i>\n\n"
@@ -302,7 +299,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
                 buttons.ibutton("Disable Media Group", f"userset {user_id} mgroup", "header")
             else:
                 buttons.ibutton("Enable Media Group", f"userset {user_id} mgroup", "header")
-        elif key in ['lprefix', 'lremname', 'lsuffix', 'lcaption', 'ldump', 'lattachment']:
+        elif key in ['lprefix', 'lremname', 'lsuffix', 'lcaption', 'ldump', 'metadata', 'lattachment']:
             set_exist = 'Not Exists' if (val:=user_dict.get(key, config_dict.get(f'LEECH_FILENAME_{key[1:].upper()}', ''))) == '' else val
             if set_exist != 'Not Exists' and key == "ldump":
                 dump_items = [f"{index}. <b>{dump}</b> : <code>{ids}</code>" for index, (dump, ids) in enumerate(val.items(), start=1)]
@@ -313,16 +310,6 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
                 text += f"➲ <b>Leech Filename {fname_dict[key]} :</b> {set_exist}\n\n"
             else:
                 text += f"➲ <b>Leech Filename {fname_dict[key]} :</b> {escape(trun(set_exist, 600))}\n\n"
-        elif edit_type and edit_type.startswith('mset_'):
-            m_key = edit_type.split('_', 1)[1]
-            if m_key == 'all':
-                text += "Send your Metadata String.\nFormat: <code>Title:Value|Author:Value|Year:2026</code>\n<b>Timeout:</b> 60 sec"
-            else:
-                text += f"Send Value for <b>{m_key}</b>\n<i>Type <code>clear</code> to remove this tag.</i>\n<b>Timeout:</b> 60 sec"
-            buttons.ibutton("Stop Change", f"userset {user_id} metadata")
-            buttons.ibutton("Back", f"userset {user_id} metadata", "footer")
-            buttons.ibutton("Close", f"userset {user_id} close", "footer")
-            return text, buttons.build_menu(2)
         elif key in ['autorename_format', 'custom_title']:
             set_exist = 'Not Exists' if (val:=user_dict.get(key, '')) == '' else val
             name_str = "Auto Rename Format" if key == 'autorename_format' else "Custom Title"
@@ -436,38 +423,7 @@ async def set_custom(client, message, pre_event, key, direct=False):
     return_key = 'leech'
     n_key = key
     user_dict = user_data.get(user_id, {})
-    
-    if key.startswith('mset_'):
-        m_key = key.split('_', 1)[1]
-        meta_str = user_dict.get('metadata', config_dict.get('METADATA', ''))
-        
-        meta_dict = {}
-        if meta_str:
-            if '|' in meta_str or ':' in meta_str:
-                for pair in meta_str.split('|'):
-                    if ':' in pair:
-                        k, v = pair.split(':', 1)
-                        meta_dict[k.strip().title()] = v.strip()
-            else:
-                meta_dict['Title'] = meta_str
-        
-        if m_key == 'all':
-            meta_str = value
-        else:
-            if value.strip().lower() == 'clear':
-                if m_key in meta_dict:
-                    del meta_dict[m_key]
-            else:
-                meta_dict[m_key] = value
-            
-            meta_str = '|'.join([f"{k}:{v}" for k, v in meta_dict.items()])
-        
-        value = meta_str
-        n_key = 'metadata'
-        return_key = 'metadata'
-        key = 'metadata'
-        
-    elif key in ['gofile', 'streamtape']:
+    if key in ['gofile', 'streamtape']:
         ddl_dict = user_dict.get('ddl_servers', {})
         mode, api = ddl_dict.get(key, [False, ""])
         if key == "gofile" and not await Gofile.is_goapi(value):
@@ -528,6 +484,38 @@ async def set_custom(client, message, pre_event, key, direct=False):
     if DATABASE_URL:
         await DbManger().update_user_data(user_id)
 
+async def set_metadata_key(client, message, pre_event, mkey):
+    user_id = message.from_user.id
+    handler_dict[user_id] = False
+    value = message.text.strip() if message.text else ""
+    user_dict = user_data.get(user_id, {})
+    meta_str = user_dict.get('metadata', '')
+    meta_dict = parse_metadata_str(meta_str)
+    if value:
+        meta_dict[mkey] = value
+    else:
+        meta_dict.pop(mkey, None)
+    new_meta_str = '|'.join([f"{k}:{v}" for k, v in meta_dict.items() if v])
+    update_user_ldata(user_id, 'metadata', new_meta_str)
+    await deleteMessage(message)
+    await update_user_settings(pre_event, 'metadata_menu')
+    if DATABASE_URL:
+        await DbManger().update_user_data(user_id)
+
+async def set_all_metadata(client, message, pre_event):
+    user_id = message.from_user.id
+    handler_dict[user_id] = False
+    value = message.text.strip() if message.text else ""
+    if value:
+        meta_keys = ["Title", "Author", "Artist", "Audio", "Subtitle", "Video", "Encoded By", "Custom Tag", "Comment", "Dubbed By", "Channel", "Website", "Copyright", "Publisher", "Encoder", "Source", "Studio"]
+        new_meta_str = '|'.join([f"{k}:{value}" for k in meta_keys])
+        update_user_ldata(user_id, 'metadata', new_meta_str)
+    else:
+        update_user_ldata(user_id, 'metadata', '')
+    await deleteMessage(message)
+    await update_user_settings(pre_event, 'metadata_menu')
+    if DATABASE_URL:
+        await DbManger().update_user_data(user_id)
 
 async def set_thumb(client, message, pre_event, key, direct=False):
     user_id = message.from_user.id
@@ -689,27 +677,6 @@ async def edit_user_settings(client, query):
         await update_user_settings(query, 'autorename')
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
-    elif data[2] == 'metadata':
-        handler_dict[user_id] = False
-        await query.answer()
-        await update_user_settings(query, 'metadata')
-    elif data[2] == 'mset':
-        handler_dict[user_id] = False
-        await query.answer()
-        m_key = query.data.split(maxsplit=3)[3]
-        await update_user_settings(query, 'metadata', f'mset_{m_key}', True)
-        pfunc = partial(set_custom, pre_event=query, key=f'mset_{m_key}')
-        rfunc = partial(update_user_settings, query, 'metadata')
-        await event_handler(client, query, pfunc, rfunc)
-    elif data[2] == 'mclear':
-        handler_dict[user_id] = False
-        await query.answer()
-        m_key = query.data.split(maxsplit=3)[3]
-        if m_key == 'all':
-            update_user_ldata(user_id, 'metadata', '')
-        await update_user_settings(query, 'metadata')
-        if DATABASE_URL:
-            await DbManger().update_user_data(user_id)
     elif data[2] in ['bot_pm', 'mediainfo', 'save_mode', 'td_mode']:
         handler_dict[user_id] = False
         if data[2] == 'save_mode' and not user_dict.get(data[2], False) and not user_dict.get('ldump'):
@@ -801,6 +768,36 @@ async def edit_user_settings(client, query):
         pfunc = partial(set_custom, pre_event=query, key=data[2])
         rfunc = partial(update_user_settings, query, data[2], 'mirror' if data[2] in ['ddl_servers', 'user_tds'] else "ddl_servers")
         await event_handler(client, query, pfunc, rfunc)
+    elif data[2] == 'metadata':
+        await query.answer()
+        await update_user_settings(query, 'metadata_menu')
+    elif data[2] == 'md_edit':
+        await query.answer()
+        idx = int(data[3])
+        meta_keys = ["Title", "Author", "Artist", "Audio", "Subtitle", "Video", "Encoded By", "Custom Tag", "Comment", "Dubbed By", "Channel", "Website", "Copyright", "Publisher", "Encoder", "Source", "Studio"]
+        mkey = meta_keys[idx]
+        text = f"⚙️ <b><u>Set Leech Metadata: {mkey}</u></b>\n\nSend the value you want to assign to <b>{mkey}</b>.\n\n<b>Timeout:</b> 60 sec"
+        buttons = ButtonMaker()
+        buttons.ibutton("Cancel / Back", f"userset {user_id} metadata")
+        await editMessage(message, text, buttons.build_menu(1))
+        pfunc = partial(set_metadata_key, pre_event=query, mkey=mkey)
+        rfunc = partial(update_user_settings, query, 'metadata_menu')
+        await event_handler(client, query, pfunc, rfunc)
+    elif data[2] == 'md_set_all':
+        await query.answer()
+        text = "✨ <b><u>Set All Metadata Fields</u></b>\n\nSend a single value to apply to <b>ALL</b> fields at once (e.g., `@Rare_Anime_Hub`).\n\n<b>Timeout:</b> 60 sec"
+        buttons = ButtonMaker()
+        buttons.ibutton("Cancel / Back", f"userset {user_id} metadata")
+        await editMessage(message, text, buttons.build_menu(1))
+        pfunc = partial(set_all_metadata, pre_event=query)
+        rfunc = partial(update_user_settings, query, 'metadata_menu')
+        await event_handler(client, query, pfunc, rfunc)
+    elif data[2] == 'md_clear_all':
+        update_user_ldata(user_id, 'metadata', '')
+        await query.answer("Cleared all custom metadata values!", show_alert=True)
+        await update_user_settings(query, 'metadata_menu')
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
     elif data[2] in ['lprefix', 'lsuffix', 'lremname', 'lcaption', 'ldump', 'mprefix', 'msuffix', 'mremname', 'lattachment', 'autorename_format', 'custom_title']:
         handler_dict[user_id] = False
         await query.answer()
@@ -935,7 +932,6 @@ async def send_users_settings(client, message):
     else:
         await sendMessage(message, f'{userid} have not saved anything..')
 
-# থাম্বনেইল সেট করার জন্য নতুন হ্যান্ডলার
 async def set_thumb_cmd(client, message):
     user_id = message.from_user.id
     reply = message.reply_to_message
@@ -949,7 +945,6 @@ async def set_thumb_cmd(client, message):
     photo_dir = await message.download(reply.photo.file_id)
     des_dir = ospath.join(path, f'{user_id}.jpg')
     
-    # ইমেজ কনভার্ট এবং সেভ করা
     await sync_to_async(Image.open(photo_dir).convert("RGB").save, des_dir, "JPEG")
     await aioremove(photo_dir)
     
@@ -964,6 +959,4 @@ bot.add_handler(MessageHandler(send_users_settings, filters=command(
 bot.add_handler(MessageHandler(user_settings, filters=command(
     BotCommands.UserSetCommand) & CustomFilters.authorized_uset))
 bot.add_handler(CallbackQueryHandler(edit_user_settings, filters=regex("^userset")))
-
-# থাম্বনেইল হ্যান্ডলার রেজিস্ট্রেশন
 bot.add_handler(MessageHandler(set_thumb_cmd, filters=command("t") & CustomFilters.authorized_uset))
