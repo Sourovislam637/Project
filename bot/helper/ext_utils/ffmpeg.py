@@ -16,30 +16,55 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
     basenameX = re_sub(r'www\S+', '', basename)
     basenameX = re_sub(r'(^\s*-\s*|(\s*-\s*){2,})', '', basenameX)
 
-    # 1. Check if the file is in .mkv format.
+    # Check if the file is in .mkv or .mp4 format.
     file_ext = os_path.splitext(file_name)[-1].lower()
-    if file_ext != '.mkv':
-        # Skip attachment process for .mkv files.
+    if file_ext not in ['.mkv', '.mp4']:
+        # Skip metadata process for unsupported files
         return
 
-    # Conditional metadata title
+    # Conditional default metadata title
     if basename.strip().lower().startswith("www"):
-        title_metadata = f"{metadata} - {basenameX}"
+        title_val = f"{metadata} - {basenameX}"
     elif basename.strip().lower().startswith("@"):
-        title_metadata = f"{basenameX}"
+        title_val = f"{basenameX}"
     else:
-        title_metadata = metadata  # default
+        title_val = metadata
 
     cmd = [
         bot_cache['pkgs'][2], '-i', media_file,
-        '-map', '0',
-        '-metadata', f'title={title_metadata}',
-        '-metadata:s:v', f'title={metadata}',
-        '-metadata:s:a', f'title={metadata}',
-        '-metadata:s:s', f'title={metadata}', 
-        '-c', 'copy',
-        outfile
+        '-map', '0'
     ]
+
+    if metadata:
+        if '|' in metadata or ':' in metadata:
+            # Multi-Metadata Logic
+            for pair in metadata.split('|'):
+                if ':' not in pair:
+                    continue
+                key, val = pair.split(':', 1)
+                key = key.strip().lower()
+                val = val.strip()
+                
+                if key == 'video':
+                    cmd.extend(['-metadata:s:v', f'title={val}'])
+                elif key == 'audio':
+                    cmd.extend(['-metadata:s:a', f'title={val}'])
+                elif key == 'subtitle':
+                    cmd.extend(['-metadata:s:s', f'title={val}'])
+                else:
+                    # Replace spaces with underscores for FFmpeg keys
+                    ffmpeg_key = key.replace(' ', '_')
+                    cmd.extend(['-metadata', f'{ffmpeg_key}={val}'])
+        else:
+            # Legacy Single Metadata Logic
+            cmd.extend([
+                '-metadata', f'title={title_val}',
+                '-metadata:s:v', f'title={metadata}',
+                '-metadata:s:a', f'title={metadata}',
+                '-metadata:s:s', f'title={metadata}'
+            ])
+
+    cmd.extend(['-c', 'copy', outfile])
   
     listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
     code = await listener.suproc.wait()
