@@ -17,7 +17,7 @@ from bot.helper.telegram_helper.button_build import ButtonMaker
 
 LIST_ITEMS = 4
 IMDB_GENRE_EMOJI = {"Action": "🚀", "Adult": "🔞", "Adventure": "🌋", "Animation": "🎠", "Biography": "📜", "Comedy": "🪗", "Crime": "🔪", "Documentary": "🎞", "Drama": "🎭", "Family": "👨‍👩‍👧‍👦", "Fantasy": "🫧", "Film Noir": "🎯", "Game Show": "🎮", "History": "🏛", "Horror": "🧟", "Musical": "🎻", "Music": "🎸", "Mystery": "🧳", "News": "📰", "Reality-TV": "🖥", "Romance": "🥰", "Sci-Fi": "🌠", "Short": "📝", "Sport": "⛳", "Talk-Show": "👨‍🍳", "Thriller": "🗡", "War": "⚔", "Western": "🪩"}
-MDL_API = "https://my-drama-list-api-ten.vercel.app/api" #Public API ! Do Not Abuse !
+MDL_API = "http://kuryana.vercel.app/" #Public API ! Do Not Abuse !
 
 async def mydramalist_search(_, message):
     if ' ' in message.text:
@@ -31,26 +31,27 @@ async def mydramalist_search(_, message):
                     return await editMessage(temp, "<i>No Results Found</i>, Try Again or Use <b>MyDramaList Link</b>")
                 mdl = await resp.json()
         
-        # Safely extract dramas whether the API returns a List or a Dict
-        dramas = []
-        if isinstance(mdl, dict):
-            dramas = mdl.get('results', {}).get('dramas', [])
-        elif isinstance(mdl, list):
-            dramas = mdl
-            
-        if not dramas:
-            return await editMessage(temp, "<i>No Results Found</i>, Try Again or Use <b>MyDramaList Link</b>")
+        # Robust handling for List/Dict response
+        if isinstance(mdl, list):
+            results = mdl
+        elif isinstance(mdl, dict):
+            if 'results' in mdl and isinstance(mdl['results'], dict) and 'dramas' in mdl['results']:
+                results = mdl['results']['dramas']
+            elif 'results' in mdl and isinstance(mdl['results'], list):
+                results = mdl['results']
+            else:
+                results = []
+        else:
+            results = []
 
-        for drama in dramas:
-            if not isinstance(drama, dict):
-                continue
-            d_title = drama.get('title')
-            d_slug = drama.get('slug')
-            d_year = drama.get('year', 'N/A')
+        if not results:
+            return await editMessage(temp, "<i>No Results Found</i>, Try Again or Use <b>MyDramaList Link</b>")
             
-            if d_title and d_slug:
-                buttons.ibutton(f"🎬 {d_title} ({d_year})", f"mdl {user_id} drama {d_slug}")
-                
+        for drama in results:
+            slug = drama.get('slug') or drama.get('id')
+            if not slug:
+                continue
+            buttons.ibutton(f"🎬 {drama.get('title')} ({drama.get('year')})", f"mdl {user_id} drama {slug}")
         buttons.ibutton("🚫 Close 🚫", f"mdl {user_id} close")
         await editMessage(temp, '<b><i>Dramas found on MyDramaList :</i></b>', buttons.build_menu(1))
     else:
