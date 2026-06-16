@@ -48,7 +48,6 @@ class _BotCommands:
         self.SpeedCommand = [f'speedtest{CMD_SUFFIX}', f'sp{CMD_SUFFIX}']
         self.RssCommand = f'rss{CMD_SUFFIX}'
         self.LoginCommand = 'login'
-        self.PosterCommand = 'poster'
         self.AddImageCommand = f'addimg{CMD_SUFFIX}'
         self.ImagesCommand = f'images{CMD_SUFFIX}'
         self.IMDBCommand = f'imdb{CMD_SUFFIX}'
@@ -56,6 +55,7 @@ class _BotCommands:
         self.AnimeHelpCommand = f'animehelp{CMD_SUFFIX}'
         self.MediaInfoCommand = [f'mediainfo{CMD_SUFFIX}', f'mi{CMD_SUFFIX}']
         self.MyDramaListCommand = f'mdl{CMD_SUFFIX}'
+        self.PosterCommand = f'poster{CMD_SUFFIX}'
         self.GDCleanCommand = [f'gdclean{CMD_SUFFIX}', f'gc{CMD_SUFFIX}']
         self.BroadcastCommand = [f'broadcast{CMD_SUFFIX}', f'bc{CMD_SUFFIX}']
 
