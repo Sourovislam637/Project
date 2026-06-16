@@ -944,13 +944,18 @@ async def set_thumb_cmd(client, message):
         await mkdir(path)
     
     photo_dir = await client.download_media(reply)
-    
     des_dir = ospath.join(path, f'{user_id}.jpg')
     
     await sync_to_async(Image.open(photo_dir).convert("RGB").save, des_dir, "JPEG")
     await aioremove(photo_dir)
     
     update_user_ldata(user_id, 'thumb', des_dir)
+    
+    try:
+        await reply.delete()
+    except Exception as e:
+        LOGGER.error(f"Failed to delete thumbnail photo: {e}")
+    
     await sendMessage(message, "✅ Custom Thumbnail saved successfully!")
     
     if DATABASE_URL:
