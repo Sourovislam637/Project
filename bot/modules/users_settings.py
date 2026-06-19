@@ -256,7 +256,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         if custom_title != 'Not Exists':
             buttons.ibutton("↻ Delete Title", f"userset {user_id} dcustom_title")
         
-        buttons.ibutton("Back", f"userset {user_id} back autorename", "footer")
+        buttons.ibutton("Back", f"userset {user_id} back leech", "footer")
         buttons.ibutton("Close", f"userset {user_id} close", "footer")
         button = buttons.build_menu(2)
     elif key == "ddl_servers":
