@@ -466,7 +466,7 @@ class MirrorLeechListener:
         if self.isSuperGroup and config_dict['INCOMPLETE_TASK_NOTIFIER'] and DATABASE_URL:
             await DbManger().rm_complete_task(self.message.link)
         user_id = self.message.from_user.id
-        name, _ = await format_filename(name, user_id, isMirror=not self.isLeech)
+        name, _ = await format_filename(name, user_id, isMirror=not self.isLeech, leech_utils=self.leech_utils)
         user_dict = user_data.get(user_id, {})
         msg = BotTheme('NAME', Name="Task has been Completed!"if config_dict['SAFE_MODE'] and self.isSuperGroup else escape(name))
         msg += BotTheme('SIZE', Size=get_readable_file_size(size))
