@@ -124,5 +124,5 @@ async def rss_monitor():
             await check_user_rss(user_id, rss_pref, feed_cache)
 
 if scheduler:
-    scheduler.add_job(rss_monitor, 'interval', minutes=10, id='rss_monitor', replace_existing=True)
+    scheduler.add_job(rss_monitor, 'interval', minutes=3, id='rss_monitor', replace_existing=True)
     LOGGER.info("RSS Monitor Scheduled to run every 10 minutes.")
