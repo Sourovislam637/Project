@@ -199,7 +199,7 @@ class TgUploader:
 
     async def __prepare_file(self, prefile_, dirpath):
         try:
-            file_, cap_mono = await format_filename(prefile_, self.__user_id, dirpath)
+            file_, cap_mono = await format_filename(prefile_, self.__user_id, dirpath, leech_utils=self.__leech_utils)
         except Exception as err:
             return await self.__listener.onUploadError(f'Error in Format Filename : {err}')
         if prefile_ != file_:
