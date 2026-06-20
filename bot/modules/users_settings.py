@@ -371,10 +371,36 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         rss_dict = user_dict.get('rss', {})
         subplease = "Enabled" if rss_dict.get('subplease', False) else "Disabled"
         buttons.ibutton(f"{'✅️' if subplease == 'Enabled' else ''} Subplease (1080p)", f"userset {user_id} rss_toggle subplease")
+
+        rss_chat = rss_dict.get('chat', 'Not Exists')
+        buttons.ibutton(f"{'✅️' if rss_chat != 'Not Exists' else ''} RSS Target Chat", f"userset {user_id} rss_set chat")
+
+        rss_ar = rss_dict.get('autorename', 'Not Exists')
+        buttons.ibutton(f"{'✅️' if rss_ar != 'Not Exists' else ''} RSS Auto Rename", f"userset {user_id} rss_set autorename")
+
+        rss_thumb = rss_dict.get('thumb', 'Not Exists')
+        buttons.ibutton(f"{'✅️' if rss_thumb != 'Not Exists' else ''} RSS Thumbnail", f"userset {user_id} rss_set thumb")
+
+        rss_cap = rss_dict.get('caption', 'Not Exists')
+        buttons.ibutton(f"{'✅️' if rss_cap != 'Not Exists' else ''} RSS Caption", f"userset {user_id} rss_set caption")
+
+        rss_pre = rss_dict.get('prefix', 'Not Exists')
+        buttons.ibutton(f"{'✅️' if rss_pre != 'Not Exists' else ''} RSS Prefix", f"userset {user_id} rss_set prefix")
+
+        rss_suf = rss_dict.get('suffix', 'Not Exists')
+        buttons.ibutton(f"{'✅️' if rss_suf != 'Not Exists' else ''} RSS Suffix", f"userset {user_id} rss_set suffix")
+
+        if any(k in rss_dict for k in ['chat', 'autorename', 'thumb', 'caption', 'prefix', 'suffix']):
+            buttons.ibutton("↻ Reset RSS Settings", f"userset {user_id} rss_reset")
+
         buttons.ibutton("Back", f"userset {user_id} back", "footer")
         buttons.ibutton("Close", f"userset {user_id} close", "footer")
-        text = BotTheme('RSS', NAME=name, SUBPLEASE=subplease)
-        button = buttons.build_menu(1)
+
+        text = BotTheme('RSS', NAME=name, SUBPLEASE=subplease,
+                        RSS_CHAT=rss_chat, RSS_AR=escape(trun(rss_ar)),
+                        RSS_THUMB=escape(trun(rss_thumb)), RSS_CAP=escape(trun(rss_cap)),
+                        RSS_PRE=escape(trun(rss_pre)), RSS_SUF=escape(trun(rss_suf)))
+        button = buttons.build_menu(2)
     return text, button
 
 
@@ -526,6 +552,20 @@ async def set_all_metadata(client, message, pre_event):
     await update_user_settings(pre_event, 'metadata_menu')
     if DATABASE_URL:
         await DbManger().update_user_data(user_id)
+
+async def set_rss_custom(client, message, pre_event, key):
+    user_id = message.from_user.id
+    handler_dict[user_id] = False
+    value = message.text.strip()
+    user_dict = user_data.get(user_id, {})
+    rss_dict = user_dict.get('rss', {})
+    rss_dict[key] = value
+    update_user_ldata(user_id, 'rss', rss_dict)
+    await deleteMessage(message)
+    await update_user_settings(pre_event, 'rss')
+    if DATABASE_URL:
+        await DbManger().update_user_data(user_id)
+
 
 async def set_thumb(client, message, pre_event, key, direct=False):
     user_id = message.from_user.id
@@ -816,6 +856,25 @@ async def edit_user_settings(client, query):
         rss_dict = user_dict.get('rss', {})
         feed = data[3]
         rss_dict[feed] = not rss_dict.get(feed, False)
+        update_user_ldata(user_id, 'rss', rss_dict)
+        await update_user_settings(query, 'rss')
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+    elif data[2] == 'rss_set':
+        await query.answer()
+        key = data[3]
+        text = f"⚙️ <b><u>Set RSS {key.capitalize()}:</u></b>\n\nSend the value you want to assign to <b>{key}</b>.\n\n<b>Timeout:</b> 60 sec"
+        buttons = ButtonMaker()
+        buttons.ibutton("Cancel / Back", f"userset {user_id} rss")
+        await editMessage(message, text, buttons.build_menu(1))
+        pfunc = partial(set_rss_custom, pre_event=query, key=key)
+        rfunc = partial(update_user_settings, query, 'rss')
+        await event_handler(client, query, pfunc, rfunc)
+    elif data[2] == 'rss_reset':
+        await query.answer()
+        rss_dict = user_dict.get('rss', {})
+        for k in ['chat', 'autorename', 'thumb', 'caption', 'prefix', 'suffix']:
+            rss_dict.pop(k, None)
         update_user_ldata(user_id, 'rss', rss_dict)
         await update_user_settings(query, 'rss')
         if DATABASE_URL:

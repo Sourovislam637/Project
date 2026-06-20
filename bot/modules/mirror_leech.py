@@ -59,6 +59,10 @@ async def _mirror_leech(client, message, isQbit=False, isLeech=False, sameDir=No
                 '-h': '', '-headers': '',
                 '-ss': '0', '-screenshots': '',
                 '-t': '', '-thumb': '',
+                '-pre': '', '-prefix': '',
+                '-suf': '', '-suffix': '',
+                '-cap': '', '-caption': '',
+                '-ar': '', '-autorename': '',
     }
 
     args = arg_parser(input_list[1:], arg_base)
@@ -85,6 +89,10 @@ async def _mirror_leech(client, message, isQbit=False, isLeech=False, sameDir=No
     ussr          = args['-u'] or args['-user']
     pssw          = args['-p'] or args['-pass']
     thumb         = args['-t'] or args['-thumb']
+    prefix        = args['-pre'] or args['-prefix']
+    suffix        = args['-suf'] or args['-suffix']
+    caption       = args['-cap'] or args['-caption']
+    autorename    = args['-ar'] or args['-autorename']
     sshots        = int(ss) if (ss := (args['-ss'] or args['-screenshots'])).isdigit() else 0
     bulk_start    = 0
     bulk_end      = 0
@@ -335,7 +343,8 @@ async def _mirror_leech(client, message, isQbit=False, isLeech=False, sameDir=No
 
     listener = MirrorLeechListener(message, compress, extract, isQbit, isLeech, tag, select, seed,
                                     sameDir, rcf, up, join, drive_id=drive_id, index_link=index_link, 
-                                    source_url=org_link or link, leech_utils={'screenshots': sshots, 'thumb': thumb})
+                                    source_url=org_link or link, leech_utils={'screenshots': sshots, 'thumb': thumb,
+                                    'prefix': prefix, 'suffix': suffix, 'caption': caption, 'autorename': autorename})
 
     if file_ is not None:
         await delete_links(message)

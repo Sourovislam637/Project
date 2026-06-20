@@ -72,6 +72,20 @@ async def check_user_rss(user_id, rss_pref, feed_cache):
         LOGGER.info(f"New RSS item for {user_id}: {entry.title}")
         mock_id = int(time() * 1000)
         msg_text = f"/leech {entry.link}"
+
+        if rss_chat := rss_pref.get('chat'):
+            msg_text += f" -ud {rss_chat}"
+        if rss_thumb := rss_pref.get('thumb'):
+            msg_text += f" -t {rss_thumb}"
+        if rss_pre := rss_pref.get('prefix'):
+            msg_text += f" -pre {rss_pre}"
+        if rss_suf := rss_pref.get('suffix'):
+            msg_text += f" -suf {rss_suf}"
+        if rss_cap := rss_pref.get('caption'):
+            msg_text += f" -cap {rss_cap}"
+        if rss_ar := rss_pref.get('autorename'):
+            msg_text += f" -ar {rss_ar}"
+
         mock_msg = MockMessage(user_id, msg_text, mock_id)
 
         try:

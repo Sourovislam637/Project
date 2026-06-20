@@ -16,19 +16,25 @@ def trun(text, limit=60):
     text = str(text)
     return text[:limit] + "..." if len(text) > limit else text
 
-def get_autorename(filename, user_id, size="", media_quality="", lang="", subs=""):
+def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="", format_str=None):
     """
     Advanced Auto Rename Logic: Cleans the filename and applies user format.
     Available Tags: {title}, {season}, {episode}, {quality}, {codec}, {audio}, {sub}, {size}, {language}
     """
     user_dict = user_data.get(user_id, {})
-    
-    # যদি ইউজারের Auto Rename বন্ধ থাকে, তবে অরিজিনাল নাম রিটার্ন করবে
-    if not user_dict.get('autorename', False):
+
+    if format_str is False or format_str in ['False', 'false', 'no', 'off']:
         return filename
 
-    # Default format set
-    format_str = user_dict.get('autorename_format', '{title} - S{season}E{episode} - {quality} {codec} {audio} {sub}')
+    if not format_str:
+        if not user_dict.get('autorename', False):
+            return filename
+        format_str = user_dict.get('autorename_format', '{title} - S{season}E{episode} - {quality} {codec} {audio} {sub}')
+    elif format_str in [True, 'True', 'true', 'yes', 'on']:
+        format_str = user_dict.get('autorename_format', '{title} - S{season}E{episode} - {quality} {codec} {audio} {sub}')
+
+    if not isinstance(format_str, str):
+        format_str = '{title} - S{season}E{episode} - {quality} {codec} {audio} {sub}'
     if not format_str:
         format_str = '{title} - S{season}E{episode} - {quality}'
 
