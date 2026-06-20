@@ -1,6 +1,8 @@
 import feedparser
 from asyncio import sleep
 from time import time
+from datetime import datetime
+from pyrogram.enums import ChatType
 
 from bot import scheduler, user_data, LOGGER, bot, DATABASE_URL
 from bot.helper.ext_utils.bot_utils import new_task, update_user_ldata, sync_to_async
@@ -8,13 +10,15 @@ from bot.helper.ext_utils.db_handler import DbManger
 from bot.modules.mirror_leech import _mirror_leech
 
 class MockMessage:
-    def __init__(self, uid, text, mid):
+    def __init__(self, uid, text, mid, link):
         self.from_user = type('User', (), {'id': uid, 'username': None, 'mention': f'ID:{uid}', 'is_bot': False})
-        self.chat = type('Chat', (), {'id': uid})
+        self.chat = type('Chat', (), {'id': uid, 'type': ChatType.PRIVATE})
         self.text = text
         self.id = mid
         self.reply_to_message = None
         self.sender_chat = None
+        self.date = datetime.now()
+        self.link = link
 
     async def reply(self, text, *args, **kwargs):
         return await bot.send_message(self.chat.id, text, *args, **kwargs)
@@ -87,7 +91,7 @@ async def check_user_rss(user_id, rss_pref, feed_cache):
             if rss_ar := rss_pref.get('autorename'):
                 msg_text += f" -ar {rss_ar}"
 
-            mock_msg = MockMessage(user_id, msg_text, mock_id)
+            mock_msg = MockMessage(user_id, msg_text, mock_id, entry.link)
 
             try:
                 await _mirror_leech(bot, mock_msg, isLeech=True)
@@ -124,5 +128,5 @@ async def rss_monitor():
             await check_user_rss(user_id, rss_pref, feed_cache)
 
 if scheduler:
-    scheduler.add_job(rss_monitor, 'interval', minutes=3, id='rss_monitor', replace_existing=True)
-    LOGGER.info("RSS Monitor Scheduled to run every 10 minutes.")
+    scheduler.add_job(rss_monitor, 'interval', minutes=5, id='rss_monitor', replace_existing=True, next_run_time=datetime.now())
+    LOGGER.info("RSS Monitor Scheduled to run every 5 minutes.")
