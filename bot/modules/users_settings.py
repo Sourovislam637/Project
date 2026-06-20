@@ -372,6 +372,9 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         subplease = "Enabled" if rss_dict.get('subplease', False) else "Disabled"
         buttons.ibutton(f"{'✅️' if subplease == 'Enabled' else ''} Subplease (1080p)", f"userset {user_id} rss_toggle subplease")
 
+        test_rss = "Enabled" if rss_dict.get('test_rss', False) else "Disabled"
+        buttons.ibutton(f"{'✅️' if test_rss == 'Enabled' else ''} Test RSS", f"userset {user_id} rss_toggle test_rss")
+
         rss_chat = rss_dict.get('chat', 'Not Exists')
         buttons.ibutton(f"{'✅️' if rss_chat != 'Not Exists' else ''} RSS Target Chat", f"userset {user_id} rss_set chat")
 
@@ -396,7 +399,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         buttons.ibutton("Back", f"userset {user_id} back", "footer")
         buttons.ibutton("Close", f"userset {user_id} close", "footer")
 
-        text = BotTheme('RSS', NAME=name, SUBPLEASE=subplease,
+        text = BotTheme('RSS', NAME=name, SUBPLEASE=subplease, TEST_RSS=test_rss,
                         RSS_CHAT=rss_chat, RSS_AR=escape(trun(rss_ar)),
                         RSS_THUMB=escape(trun(rss_thumb)), RSS_CAP=escape(trun(rss_cap)),
                         RSS_PRE=escape(trun(rss_pre)), RSS_SUF=escape(trun(rss_suf)))
@@ -567,6 +570,30 @@ async def set_rss_custom(client, message, pre_event, key):
         await DbManger().update_user_data(user_id)
 
 
+async def set_rss_thumb(client, message, pre_event, key):
+    user_id = message.from_user.id
+    handler_dict[user_id] = False
+    path = "Thumbnails/"
+    if not await aiopath.isdir(path):
+        await mkdir(path)
+    if message.photo:
+        photo_dir = await message.download()
+        des_dir = ospath.join(path, f'rss_{user_id}.jpg')
+        await sync_to_async(Image.open(photo_dir).convert("RGB").save, des_dir, "JPEG")
+        await aioremove(photo_dir)
+        value = des_dir
+    else:
+        value = message.text.strip()
+    user_dict = user_data.get(user_id, {})
+    rss_dict = user_dict.get('rss', {})
+    rss_dict[key] = value
+    update_user_ldata(user_id, 'rss', rss_dict)
+    await deleteMessage(message)
+    await update_user_settings(pre_event, 'rss')
+    if DATABASE_URL:
+        await DbManger().update_user_data(user_id)
+
+
 async def set_thumb(client, message, pre_event, key, direct=False):
     user_id = message.from_user.id
     handler_dict[user_id] = False
@@ -622,7 +649,7 @@ async def event_handler(client, query, pfunc, rfunc, photo=False, document=False
 
     async def event_filter(_, __, event):
         if photo:
-            mtype = event.photo
+            mtype = event.photo or event.text
         elif document:
             mtype = event.document
         else:
@@ -864,12 +891,14 @@ async def edit_user_settings(client, query):
         await query.answer()
         key = data[3]
         text = f"⚙️ <b><u>Set RSS {key.capitalize()}:</u></b>\n\nSend the value you want to assign to <b>{key}</b>.\n\n<b>Timeout:</b> 60 sec"
+        if key == 'thumb':
+            text += "\n\n<b>NOTE:</b> <i>You can send a photo or a URL/Telegram Link.</i>"
         buttons = ButtonMaker()
         buttons.ibutton("Cancel / Back", f"userset {user_id} rss")
         await editMessage(message, text, buttons.build_menu(1))
-        pfunc = partial(set_rss_custom, pre_event=query, key=key)
+        pfunc = partial(set_rss_thumb if key == 'thumb' else set_rss_custom, pre_event=query, key=key)
         rfunc = partial(update_user_settings, query, 'rss')
-        await event_handler(client, query, pfunc, rfunc)
+        await event_handler(client, query, pfunc, rfunc, photo=key == 'thumb')
     elif data[2] == 'rss_reset':
         await query.answer()
         rss_dict = user_dict.get('rss', {})
