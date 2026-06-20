@@ -302,6 +302,7 @@ Type {help_command} to get a list of available commands</b>'''
     RSS = '''㊂ <b><u>RSS Settings : {NAME}</u></b>
 
 ┎<b> Subplease (1080p) :</b> <code>{SUBPLEASE}</code>
+┠<b> Test RSS :</b> <code>{TEST_RSS}</code>
 ┠<b> Target Chat :</b> <code>{RSS_CHAT}</code>
 ┠<b> Auto Rename :</b> <code>{RSS_AR}</code>
 ┠<b> RSS Thumbnail :</b> <code>{RSS_THUMB}</code>
