@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import re
 import os
-from bot import user_data, LOGGER, bot
+from bot import user_data, LOGGER, bot, DATABASE_URL
+from bot.helper.ext_utils.bot_utils import update_user_ldata
+from bot.helper.ext_utils.db_handler import DbManger
 from pyrogram.handlers import MessageHandler
 from pyrogram.filters import command
 from bot.helper.telegram_helper.message_utils import sendMessage
@@ -107,6 +109,14 @@ def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="
 
 async def autorename_cmd(client, message):
     user_id = message.from_user.id
+    if len(message.command) > 1:
+        format_str = message.text.split(maxsplit=1)[1].strip()
+        update_user_ldata(user_id, 'autorename_format', format_str)
+        update_user_ldata(user_id, 'autorename', True)
+        await sendMessage(message, f"➲ <b>Auto Rename Format Added :</b> <code>{escape(format_str)}</code>")
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+        return
     user_dict = user_data.get(user_id, {})
     buttons = ButtonMaker()
 
