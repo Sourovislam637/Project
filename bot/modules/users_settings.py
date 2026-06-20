@@ -83,6 +83,7 @@ fname_dict = {'rcc': 'RClone',
              'autorename': 'Auto Rename',
              'autorename_format': 'Auto Rename Format',
              'custom_title': 'Custom Title',
+             'rss': 'RSS Settings',
              }
 
 async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None):
@@ -96,6 +97,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         buttons.ibutton("Universal Settings", f"userset {user_id} universal")
         buttons.ibutton("Mirror Settings", f"userset {user_id} mirror")
         buttons.ibutton("Leech Settings", f"userset {user_id} leech")
+        buttons.ibutton("RSS Settings", f"userset {user_id} rss")
         if user_dict and any(key in user_dict for key in list(fname_dict.keys())):
             buttons.ibutton("Reset Setting", f"userset {user_id} reset_all")
         buttons.ibutton("Close", f"userset {user_id} close")
@@ -365,6 +367,14 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             buttons.ibutton("Back", f"userset {user_id} back {edit_type}", "footer")
         buttons.ibutton("Close", f"userset {user_id} close", "footer")
         button = buttons.build_menu(2)
+    elif key == 'rss':
+        rss_dict = user_dict.get('rss', {})
+        subplease = "Enabled" if rss_dict.get('subplease', False) else "Disabled"
+        buttons.ibutton(f"{'✅️' if subplease == 'Enabled' else ''} Subplease (1080p)", f"userset {user_id} rss_toggle subplease")
+        buttons.ibutton("Back", f"userset {user_id} back", "footer")
+        buttons.ibutton("Close", f"userset {user_id} close", "footer")
+        text = BotTheme('RSS', NAME=name, SUBPLEASE=subplease)
+        button = buttons.build_menu(1)
     return text, button
 
 
@@ -796,6 +806,18 @@ async def edit_user_settings(client, query):
         update_user_ldata(user_id, 'metadata', '')
         await query.answer("Cleared all custom metadata values!", show_alert=True)
         await update_user_settings(query, 'metadata_menu')
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+    elif data[2] == 'rss':
+        await query.answer()
+        await update_user_settings(query, 'rss')
+    elif data[2] == 'rss_toggle':
+        await query.answer()
+        rss_dict = user_dict.get('rss', {})
+        feed = data[3]
+        rss_dict[feed] = not rss_dict.get(feed, False)
+        update_user_ldata(user_id, 'rss', rss_dict)
+        await update_user_settings(query, 'rss')
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
     elif data[2] in ['lprefix', 'lsuffix', 'lremname', 'lcaption', 'ldump', 'mprefix', 'msuffix', 'mremname', 'lattachment', 'autorename_format', 'custom_title']:
