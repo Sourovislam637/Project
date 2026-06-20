@@ -58,6 +58,8 @@ class TgUploader:
         self.__leech_utils = self.__listener.leech_utils
         
     async def get_custom_thumb(self, thumb):
+        if await aiopath.exists(thumb):
+            return thumb
         if is_telegram_link(thumb):
             try:
                 msg, client = await get_tg_link_content(thumb, self.__user_id )
