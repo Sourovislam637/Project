@@ -7,6 +7,7 @@ from pyrogram.filters import command
 from bot.helper.telegram_helper.message_utils import sendMessage
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.button_build import ButtonMaker
+from bot.helper.telegram_helper.bot_commands import BotCommands
 from html import escape
 
 def trun(text, limit=60):
@@ -137,4 +138,4 @@ async def autorename_cmd(client, message):
     await sendMessage(message, text, button)
 
 # Command Handler
-bot.add_handler(MessageHandler(autorename_cmd, filters=command("autorename") & CustomFilters.authorized_uset))
+bot.add_handler(MessageHandler(autorename_cmd, filters=command(BotCommands.AutoRenameCommand) & CustomFilters.authorized_uset))
