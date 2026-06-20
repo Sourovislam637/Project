@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
 import re
 import os
-from bot import user_data, LOGGER
+from bot import user_data, LOGGER, bot
+from pyrogram.handlers import MessageHandler
+from pyrogram.filters import command
+from bot.helper.telegram_helper.message_utils import sendMessage
+from bot.helper.telegram_helper.filters import CustomFilters
+from bot.helper.telegram_helper.button_build import ButtonMaker
+from html import escape
+
+def trun(text, limit=60):
+    text = str(text)
+    return text[:limit] + "..." if len(text) > limit else text
 
 def get_autorename(filename, user_id, size="", media_quality="", lang="", subs=""):
     """
@@ -89,3 +99,42 @@ def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="
     except Exception as e:
         LOGGER.error(f"Auto Rename Error: {e}")
         return filename
+
+# ==========================================
+# /autorename Command Logic
+# ==========================================
+
+async def autorename_cmd(client, message):
+    user_id = message.from_user.id
+    user_dict = user_data.get(user_id, {})
+    buttons = ButtonMaker()
+
+    auto_status = 'Enabled' if user_dict.get('autorename', False) else 'Disabled'
+    format_str = user_dict.get('autorename_format', 'Not Exists')
+    custom_title = user_dict.get('custom_title', 'Not Exists')
+    
+    text = f"㊂ <b><u>Auto Rename Settings :</u></b>\n\n"
+    text += f"➲ <b>Status :</b> <i>{auto_status}</i>\n"
+    text += f"➲ <b>Current Format :</b> <code>{escape(trun(format_str, 60))}</code>\n"
+    text += f"➲ <b>Custom Title :</b> <code>{escape(trun(custom_title, 60))}</code>\n\n"
+    text += f"➲ <b>Available Tags :</b> <code>{{title}}</code>, <code>{{season}}</code>, <code>{{episode}}</code>, <code>{{quality}}</code>, <code>{{codec}}</code>, <code>{{audio}}</code>, <code>{{sub}}</code>, <code>{{size}}</code>, <code>{{language}}</code>\n"
+    text += f"➲ <b>Format Example :</b> <code>{{title}} - S{{season}}E{{episode}} - {{quality}} [{{size}}]</code>\n\n"
+    text += f"➲ <b>Description :</b> <i>Set your Custom Format and Title for Auto Renaming files. Custom Title will override {{title}}.</i>"
+
+    buttons.ibutton("Disable" if auto_status == 'Enabled' else "Enable", f"userset {user_id} toggle_autorename")
+    buttons.ibutton("Set Format", f"userset {user_id} autorename_format edit")
+    buttons.ibutton("Set Custom Title", f"userset {user_id} custom_title edit")
+    
+    if format_str != 'Not Exists':
+        buttons.ibutton("↻ Delete Format", f"userset {user_id} dautorename_format")
+    if custom_title != 'Not Exists':
+        buttons.ibutton("↻ Delete Title", f"userset {user_id} dcustom_title")
+    
+    # Back button removed as requested, only Close remains.
+    buttons.ibutton("Close", f"userset {user_id} close", "footer")
+    
+    button = buttons.build_menu(2)
+    await sendMessage(message, text, button)
+
+# Command Handler
+bot.add_handler(MessageHandler(autorename_cmd, filters=command("autorename") & CustomFilters.authorized_uset))
