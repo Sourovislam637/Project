@@ -242,7 +242,7 @@ async def split_file(path, size, file_, dirpath, split_size, listener, start_tim
             LOGGER.error(err)
     return True
 
-async def format_filename(file_, user_id, dirpath=None, isMirror=False):
+async def format_filename(file_, user_id, dirpath=None, isMirror=False, leech_utils={}):
     orig_file = file_
     up_path = ospath.join(dirpath, orig_file) if dirpath else None
     
@@ -254,14 +254,15 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False):
         dur, qual, lang, subs = await get_media_info(up_path, True)
 
     if not isMirror:
-        file_ = get_autorename(file_, user_id, size=fsize, media_quality=qual, lang=lang, subs=subs)
+        ar_format = leech_utils.get('autorename')
+        file_ = get_autorename(file_, user_id, size=fsize, media_quality=qual, lang=lang, subs=subs, format_str=ar_format)
 
     user_dict = user_data.get(user_id, {})
     ftag, ctag = ('m', 'MIRROR') if isMirror else ('l', 'LEECH')
-    prefix = config_dict.get(f'{ctag}_FILENAME_PREFIX', '') if (val:=user_dict.get(f'{ftag}prefix', '')) == '' else val
+    prefix = leech_utils.get('prefix') or (config_dict.get(f'{ctag}_FILENAME_PREFIX', '') if (val:=user_dict.get(f'{ftag}prefix', '')) == '' else val)
     remname = config_dict.get(f'{ctag}_FILENAME_REMNAME', '') if (val:=user_dict.get(f'{ftag}remname', '')) == '' else val
-    suffix = config_dict.get(f'{ctag}_FILENAME_SUFFIX', '') if (val:=user_dict.get(f'{ftag}suffix', '')) == '' else val
-    lcaption = config_dict.get('LEECH_FILENAME_CAPTION', '') if (val:=user_dict.get('lcaption', '')) == '' else val
+    suffix = leech_utils.get('suffix') or (config_dict.get(f'{ctag}_FILENAME_SUFFIX', '') if (val:=user_dict.get(f'{ftag}suffix', '')) == '' else val)
+    lcaption = leech_utils.get('caption') or (config_dict.get('LEECH_FILENAME_CAPTION', '') if (val:=user_dict.get('lcaption', '')) == '' else val)
  
     # Remove URLs starting with "www"
     file_ = re_sub(r'www\S+', '', file_, flags=IGNORECASE)
