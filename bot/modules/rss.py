@@ -11,7 +11,7 @@ from bot.modules.mirror_leech import _mirror_leech
 
 class MockMessage:
     def __init__(self, uid, text, mid, link):
-        self.from_user = type('User', (), {'id': uid, 'username': None, 'mention': f'ID:{uid}', 'is_bot': False})
+        self.from_user = type('User', (), {'id': uid, 'username': None, 'mention': lambda *args, **kwargs: f'ID:{uid}', 'is_bot': False})
         self.chat = type('Chat', (), {'id': uid, 'type': ChatType.PRIVATE})
         self.text = text
         self.id = mid
@@ -21,15 +21,18 @@ class MockMessage:
         self.link = link
 
     async def reply(self, text, *args, **kwargs):
+        kwargs.pop('quote', None)
         return await bot.send_message(self.chat.id, text, *args, **kwargs)
 
     async def reply_text(self, text, *args, **kwargs):
+        kwargs.pop('quote', None)
         return await bot.send_message(self.chat.id, text, *args, **kwargs)
 
     async def delete(self):
         pass
 
     async def reply_photo(self, photo, caption=None, *args, **kwargs):
+        kwargs.pop('quote', None)
         return await bot.send_photo(self.chat.id, photo, caption=caption, *args, **kwargs)
 
 async def check_user_rss(user_id, rss_pref, feed_cache):
