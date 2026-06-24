@@ -298,3 +298,16 @@ Type {help_command} to get a list of available commands</b>'''
 ┠<b> Leech Dumps :</b> <code>{LDUMP}</code>
 ┠<b> Leech Attachment :</b> <code>{ATTACHMENT}</code>
 ┖<b> Leech Metadata :</b> <b><code>{METADATA}</code></b>'''
+
+    RSS = '''㊂ <b><u>RSS Settings : {NAME}</u></b>
+
+┎<b> Subplease (1080p) :</b> <code>{SUBPLEASE}</code>
+┠<b> Test RSS :</b> <code>{TEST_RSS}</code>
+┠<b> Target Chat :</b> <code>{RSS_CHAT}</code>
+┠<b> Auto Rename :</b> <code>{RSS_AR}</code>
+┠<b> RSS Thumbnail :</b> <code>{RSS_THUMB}</code>
+┠<b> RSS Caption :</b> <code>{RSS_CAP}</code>
+┠<b> RSS Prefix :</b> <code>{RSS_PRE}</code>
+┖<b> RSS Suffix :</b> <code>{RSS_SUF}</code>
+
+➲ <b>Description :</b> <i>Enable to automatically leech new releases from selected RSS feeds with custom settings.</i>'''

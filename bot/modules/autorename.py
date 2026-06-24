@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import re
 import os
-from bot import user_data, LOGGER, bot
+from bot import user_data, LOGGER, bot, DATABASE_URL
+from bot.helper.ext_utils.bot_utils import update_user_ldata
+from bot.helper.ext_utils.db_handler import DbManger
 from pyrogram.handlers import MessageHandler
 from pyrogram.filters import command
 from bot.helper.telegram_helper.message_utils import sendMessage
@@ -14,19 +16,25 @@ def trun(text, limit=60):
     text = str(text)
     return text[:limit] + "..." if len(text) > limit else text
 
-def get_autorename(filename, user_id, size="", media_quality="", lang="", subs=""):
+def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="", format_str=None):
     """
     Advanced Auto Rename Logic: Cleans the filename and applies user format.
     Available Tags: {title}, {season}, {episode}, {quality}, {codec}, {audio}, {sub}, {size}, {language}
     """
     user_dict = user_data.get(user_id, {})
-    
-    # যদি ইউজারের Auto Rename বন্ধ থাকে, তবে অরিজিনাল নাম রিটার্ন করবে
-    if not user_dict.get('autorename', False):
+
+    if format_str is False or format_str in ['False', 'false', 'no', 'off']:
         return filename
 
-    # Default format set
-    format_str = user_dict.get('autorename_format', '{title} - S{season}E{episode} - {quality} {codec} {audio} {sub}')
+    if not format_str:
+        if not user_dict.get('autorename', False):
+            return filename
+        format_str = user_dict.get('autorename_format', '{title} - S{season}E{episode} - {quality} {codec} {audio} {sub}')
+    elif format_str in [True, 'True', 'true', 'yes', 'on']:
+        format_str = user_dict.get('autorename_format', '{title} - S{season}E{episode} - {quality} {codec} {audio} {sub}')
+
+    if not isinstance(format_str, str):
+        format_str = '{title} - S{season}E{episode} - {quality} {codec} {audio} {sub}'
     if not format_str:
         format_str = '{title} - S{season}E{episode} - {quality}'
 
@@ -107,6 +115,14 @@ def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="
 
 async def autorename_cmd(client, message):
     user_id = message.from_user.id
+    if len(message.command) > 1:
+        format_str = message.text.split(maxsplit=1)[1].strip()
+        update_user_ldata(user_id, 'autorename_format', format_str)
+        update_user_ldata(user_id, 'autorename', True)
+        await sendMessage(message, f"➲ <b>Auto Rename Format Added :</b> <code>{escape(format_str)}</code>")
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+        return
     user_dict = user_data.get(user_id, {})
     buttons = ButtonMaker()
 

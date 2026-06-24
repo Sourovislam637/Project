@@ -58,6 +58,8 @@ class TgUploader:
         self.__leech_utils = self.__listener.leech_utils
         
     async def get_custom_thumb(self, thumb):
+        if await aiopath.exists(thumb):
+            return thumb
         if is_telegram_link(thumb):
             try:
                 msg, client = await get_tg_link_content(thumb, self.__user_id )
@@ -199,7 +201,7 @@ class TgUploader:
 
     async def __prepare_file(self, prefile_, dirpath):
         try:
-            file_, cap_mono = await format_filename(prefile_, self.__user_id, dirpath)
+            file_, cap_mono = await format_filename(prefile_, self.__user_id, dirpath, leech_utils=self.__leech_utils)
         except Exception as err:
             return await self.__listener.onUploadError(f'Error in Format Filename : {err}')
         if prefile_ != file_:
@@ -257,7 +259,7 @@ class TgUploader:
 
     async def __send_media_group(self, subkey, key, msgs):
         msgs_list = await msgs[0].reply_to_message.reply_media_group(media=self.__get_input_media(subkey, key),
-                                                                    quote=True, disable_notification=True)
+                                                                    disable_notification=True)
         for msg in msgs:
             if msg.link in self.__msgs_dict:
                 del self.__msgs_dict[msg.link]

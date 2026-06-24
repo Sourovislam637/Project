@@ -35,7 +35,7 @@ async def sendMessage(message, text, buttons=None, photo=None, **kwargs):
                 return
             except Exception as e:
                 LOGGER.error(format_exc())
-        return await message.reply(text=text, quote=True, disable_web_page_preview=True, disable_notification=True,
+        return await message.reply(text=text, disable_web_page_preview=True, disable_notification=True,
                                     reply_markup=buttons, reply_to_message_id=rply.id if (rply := message.reply_to_message) and not rply.text and not rply.caption else None,
                                     **kwargs)
     except FloodWait as f:
@@ -168,28 +168,11 @@ async def editReplyMarkup(message, reply_markup):
 
 async def sendFile(message, file, caption=None, buttons=None):
     try:
-        return await message.reply_document(document=file, quote=True, caption=caption, disable_notification=True, reply_markup=buttons)
+        return await message.reply_document(document=file, caption=caption, disable_notification=True, reply_markup=buttons)
     except FloodWait as f:
         LOGGER.warning(str(f))
         await sleep(f.value * 1.2)
         return await sendFile(message, file, caption)
-    except Exception as e:
-        LOGGER.error(str(e))
-        return str(e)
-
-
-async def sendRss(text):
-    try:
-        if user:
-            return await user.send_message(chat_id=config_dict['RSS_CHAT'], text=text, disable_web_page_preview=True,
-                                           disable_notification=True)
-        else:
-            return await bot.send_message(chat_id=config_dict['RSS_CHAT'], text=text, disable_web_page_preview=True,
-                                          disable_notification=True)
-    except FloodWait as f:
-        LOGGER.warning(str(f))
-        await sleep(f.value * 1.2)
-        return await sendRss(text)
     except Exception as e:
         LOGGER.error(str(e))
         return str(e)
