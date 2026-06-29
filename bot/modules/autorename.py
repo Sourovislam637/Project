@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 import re
 import os
-from bot import user_data, LOGGER, bot
+from bot import user_data, LOGGER, bot, DATABASE_URL
 from pyrogram.handlers import MessageHandler
 from pyrogram.filters import command
 from bot.helper.telegram_helper.message_utils import sendMessage
+from bot.helper.ext_utils.bot_utils import update_user_ldata
+from bot.helper.ext_utils.db_handler import DbManger
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.bot_commands import BotCommands
@@ -107,6 +109,15 @@ def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="
 
 async def autorename_cmd(client, message):
     user_id = message.from_user.id
+
+    if len(message.command) > 1:
+        new_format = message.text.split(maxsplit=1)[1]
+        update_user_ldata(user_id, 'autorename_format', new_format)
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+        await sendMessage(message, f"<b>Auto Rename Format Updated To:</b>\n<code>{escape(new_format)}</code>")
+        return
+
     user_dict = user_data.get(user_id, {})
     buttons = ButtonMaker()
 
