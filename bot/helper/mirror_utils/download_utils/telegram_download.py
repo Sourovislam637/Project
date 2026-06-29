@@ -2,7 +2,7 @@
 from logging import getLogger, ERROR
 from time import time
 from asyncio import Lock
-from pyrogram import Client
+from pyrogram import Client, StopTransmission
 
 from bot import LOGGER, download_dict, download_dict_lock, non_queued_dl, queue_dict_lock, bot, user, IS_PREMIUM_USER
 from bot.helper.mirror_utils.status_utils.telegram_status import TelegramStatus
@@ -54,7 +54,7 @@ class TelegramDownloadHelper:
 
     async def __onDownloadProgress(self, current, total):
         if self.__is_cancelled:
-            self.__client.stop_transmission()
+            raise StopTransmission
         self.__processed_bytes = current
 
     async def __onDownloadError(self, error):
