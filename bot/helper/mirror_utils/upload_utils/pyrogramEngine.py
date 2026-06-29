@@ -5,6 +5,7 @@ from aiofiles.os import remove as aioremove, path as aiopath, rename as aiorenam
 from os import walk, path as ospath
 from time import time
 from PIL import Image
+from pyrogram import StopTransmission
 from pyrogram.types import InputMediaVideo, InputMediaDocument, InlineKeyboardMarkup
 from pyrogram.errors import FloodWait, RPCError, PeerIdInvalid, ChannelInvalid
 from asyncio import sleep
@@ -160,9 +161,7 @@ class TgUploader:
 
     async def __upload_progress(self, current, total):
         if self.__is_cancelled:
-            if IS_PREMIUM_USER:
-                user.stop_transmission()
-            bot.stop_transmission()
+            raise StopTransmission
         chunk_size = current - self.__last_uploaded
         self.__last_uploaded = current
         self.__processed_bytes += chunk_size
