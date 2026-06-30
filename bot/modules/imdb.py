@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
+import re
+import requests
 from contextlib import suppress
 from re import findall, IGNORECASE
-from imdb import Cinemagoer
 from pycountry import countries as conn
 
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
@@ -16,10 +17,15 @@ from bot.helper.telegram_helper.message_utils import sendMessage, editMessage
 from bot.helper.ext_utils.bot_utils import get_readable_time
 from bot.helper.telegram_helper.button_build import ButtonMaker
 
-imdb = Cinemagoer()
+OMDB_API_KEY = "39b094d0"
 
 IMDB_GENRE_EMOJI = {"Action": "🚀", "Adult": "🔞", "Adventure": "🌋", "Animation": "🎠", "Biography": "📜", "Comedy": "🪗", "Crime": "🔪", "Documentary": "🎞", "Drama": "🎭", "Family": "👨‍👩‍👧‍👦", "Fantasy": "🫧", "Film Noir": "🎯", "Game Show": "🎮", "History": "🏛", "Horror": "🧟", "Musical": "🎻", "Music": "🎸", "Mystery": "🧳", "News": "📰", "Reality-TV": "🖥", "Romance": "🥰", "Sci-Fi": "🌠", "Short": "📝", "Sport": "⛳", "Talk-Show": "👨‍🍳", "Thriller": "🗡", "War": "⚔", "Western": "🪩"}
 LIST_ITEMS = 4
+
+def clean_omdb_list(val):
+    if not val or val == "N/A":
+        return []
+    return val.split(", ")
 
 async def imdb_search(_, message):
     if ' ' in message.text:
@@ -27,23 +33,34 @@ async def imdb_search(_, message):
         title = message.text.split(' ', 1)[1]
         user_id = message.from_user.id
         buttons = ButtonMaker()
-        if title.lower().startswith("https://www.imdb.com/title/tt"):
-            movieid = title.replace("https://www.imdb.com/title/tt", "")
-            if movie := imdb.get_movie(movieid):
-                buttons.ibutton(f"🎬 {movie.get('title')} ({movie.get('year')})", f"imdb {user_id} movie {movieid}")
+        
+        if "imdb.com/title/tt" in title.lower():
+            match = re.search(r'(tt\d+)', title.lower())
+            if match:
+                movieid = match.group(1)
+                url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&i={movieid}"
+                try:
+                    movie = requests.get(url).json()
+                    if movie.get("Response") == "True":
+                        buttons.ibutton(f"🎬 {movie.get('Title')} ({movie.get('Year')})", f"imdb {user_id} movie {movieid}")
+                    else:
+                        return await editMessage(k, "<i>No Results Found</i>")
+                except Exception as e:
+                    LOGGER.error(f"OMDb API Error: {e}")
+                    return await editMessage(k, "<i>API Error, Try Again</i>")
             else:
-                return await editMessage(k, "<i>No Results Found</i>")
+                return await editMessage(k, "<i>Invalid IMDb URL</i>")
         else:
             movies = get_poster(title, bulk=True)
             if not movies:
-                return editMessage("<i>No Results Found</i>, Try Again or Use <b>Title ID</b>", k)
-            for movie in movies: # Refurbished Soon !!
-                buttons.ibutton(f"🎬 {movie.get('title')} ({movie.get('year')})", f"imdb {user_id} movie {movie.movieID}")
+                return await editMessage(k, "<i>No Results Found</i>, Try Again or Use <b>Title ID</b>")
+            for movie in movies:
+                buttons.ibutton(f"🎬 {movie.get('title')} ({movie.get('year')})", f"imdb {user_id} movie {movie.get('movieID')}")
+        
         buttons.ibutton("🚫 Close 🚫", f"imdb {user_id} close")
         await editMessage(k, '<b><i>Here What I found on IMDb.com</i></b>', buttons.build_menu(1))
     else:
         await sendMessage(message, '<i>Send Movie / TV Series Name along with /imdb Command or send IMDB URL</i>')
-
 
 def get_poster(query, bulk=False, id=False, file=None):
     if not id:
@@ -51,69 +68,91 @@ def get_poster(query, bulk=False, id=False, file=None):
         title = query
         year = findall(r'[1-2]\d{3}$', query, IGNORECASE)
         if year:
-            year = list_to_str(year[:1])
+            year = year[0]
             title = (query.replace(year, "")).strip()
         elif file is not None:
             year = findall(r'[1-2]\d{3}', file, IGNORECASE)
             if year:
-                year = list_to_str(year[:1]) 
+                year = year[0]
         else:
             year = None
-        movieid = imdb.search_movie(title.lower(), results=10)
-        if not movieid:
-            return None
+        
+        url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&s={title}"
         if year:
-            filtered = list(filter(lambda k: str(k.get('year')) == str(year), movieid)) or movieid
+            url += f"&y={year}"
+        
+        try:
+            res = requests.get(url).json()
+        except Exception as e:
+            LOGGER.error(f"OMDb API Error: {e}")
+            return None
+        
+        if res.get("Response") == "True":
+            if bulk:
+                movies = []
+                for m in res.get("Search", []):
+                    movies.append({
+                        'title': m.get('Title'),
+                        'year': m.get('Year'),
+                        'movieID': m.get('imdbID')
+                    })
+                return movies
+            else:
+                movieid = res.get("Search")[0].get("imdbID")
         else:
-            filtered = movieid
-        movieid = list(filter(lambda k: k.get('kind') in ['movie', 'tv series'], filtered)) or filtered
-        if bulk:
-            return movieid
-        movieid = movieid[0].movieID
+            return None
     else:
         movieid = query
-    movie = imdb.get_movie(movieid)
-    if movie.get("original air date"):
-        date = movie["original air date"]
-    elif movie.get("year"):
-        date = movie.get("year")
-    else:
-        date = "N/A"
-    plot = movie.get('plot')
-    plot = plot[0] if plot and len(plot) > 0 else movie.get('plot outline')
-    if plot and len(plot) > 300:
+
+    url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&i={movieid}&plot=full"
+    try:
+        movie = requests.get(url).json()
+    except Exception as e:
+        LOGGER.error(f"OMDb API Error: {e}")
+        return None
+
+    if movie.get("Response") == "False":
+        return None
+
+    plot = movie.get('Plot', '')
+    if plot and plot != "N/A" and len(plot) > 300:
         plot = f"{plot[:300]}..."
+
+    poster = movie.get('Poster', '')
+    if poster == "N/A":
+        poster = ''
+
     return {
-        'title': movie.get('title'),
-        'trailer': movie.get('videos'),
-        'votes': movie.get('votes'),
-        "aka": list_to_str(movie.get("akas")),
-        "seasons": movie.get("number of seasons"),
-        "box_office": movie.get('box office'),
-        'localized_title': movie.get('localized title'),
-        'kind': movie.get("kind"),
-        "imdb_id": f"tt{movie.get('imdbID')}",
-        "cast": list_to_str(movie.get("cast")),
-        "runtime": list_to_str([get_readable_time(int(run) * 60) for run in movie.get("runtimes", "0")]),
-        "countries": list_to_hash(movie.get("countries"), True),
-        "certificates": list_to_str(movie.get("certificates")),
-        "languages": list_to_hash(movie.get("languages")),
-        "director": list_to_str(movie.get("director")),
-        "writer":list_to_str(movie.get("writer")),
-        "producer":list_to_str(movie.get("producer")),
-        "composer":list_to_str(movie.get("composer")) ,
-        "cinematographer":list_to_str(movie.get("cinematographer")),
-        "music_team": list_to_str(movie.get("music department")),
-        "distributors": list_to_str(movie.get("distributors")),
-        'release_date': date,
-        'year': movie.get('year'),
-        'genres': list_to_hash(movie.get("genres"), emoji=True),
-        'poster': movie.get('full-size cover url'),
-        'plot': plot,
-        'rating': str(movie.get("rating"))+" / 10",
-        'url':f'https://www.imdb.com/title/tt{movieid}',
-        'url_cast':f'https://www.imdb.com/title/tt{movieid}/fullcredits#cast',
-        'url_releaseinfo':f'https://www.imdb.com/title/tt{movieid}/releaseinfo',
+        'title': movie.get('Title', 'N/A'),
+        'trailer': '',
+        'votes': movie.get('imdbVotes', 'N/A'),
+        "aka": 'N/A',
+        "seasons": movie.get("totalSeasons", "N/A"),
+        "box_office": movie.get('BoxOffice', 'N/A'),
+        'localized_title': movie.get('Title', 'N/A'),
+        'kind': movie.get("Type", "N/A"),
+        "imdb_id": movie.get("imdbID", ""),
+        "cast": list_to_str(clean_omdb_list(movie.get("Actors"))),
+        "runtime": movie.get("Runtime", "N/A"),
+        "countries": list_to_hash(clean_omdb_list(movie.get("Country")), True),
+        "certificates": movie.get("Rated", "N/A"),
+        "languages": list_to_hash(clean_omdb_list(movie.get("Language"))),
+        "director": list_to_str(clean_omdb_list(movie.get("Director"))),
+        "writer": list_to_str(clean_omdb_list(movie.get("Writer"))),
+        "producer": 'N/A',
+        "composer": 'N/A',
+        "cinematographer": 'N/A',
+        "music_team": 'N/A',
+        "distributors": 'N/A',
+        'release_date': movie.get('Released', 'N/A'),
+        'year': movie.get('Year', 'N/A'),
+        'genres': list_to_hash(clean_omdb_list(movie.get("Genre")), emoji=True),
+        'poster': poster,
+        'plot': plot if plot != "N/A" else "",
+        'rating': str(movie.get("imdbRating", "0")) + " / 10",
+        'url': f"https://www.imdb.com/title/{movie.get('imdbID')}",
+        'url_cast': f"https://www.imdb.com/title/{movie.get('imdbID')}/fullcredits#cast",
+        'url_releaseinfo': f"https://www.imdb.com/title/{movie.get('imdbID')}/releaseinfo",
     }
 
 def list_to_str(k):
@@ -162,7 +201,6 @@ def list_to_hash(k, flagg=False, emoji=False):
             listing += f'#{ele}, '
         return listing[:-2]
 
-
 async def imdb_callback(_, query):
     message = query.message
     user_id = query.from_user.id
@@ -173,16 +211,12 @@ async def imdb_callback(_, query):
         await query.answer()
         imdb = get_poster(query=data[3], id=True)
         buttons = []
-        if imdb['trailer']:
+        if imdb and imdb.get('trailer'):
             if isinstance(imdb['trailer'], list):
                 buttons.append([InlineKeyboardButton("▶️ IMDb Trailer ", url=str(imdb['trailer'][-1]))])
                 imdb['trailer'] = list_to_str(imdb['trailer'])
             else: buttons.append([InlineKeyboardButton("▶️ IMDb Trailer ", url=str(imdb['trailer']))])
         buttons.append([InlineKeyboardButton("🚫 Close 🚫", callback_data=f"imdb {user_id} close")])
-        template = ''
-        #if int(data[1]) in user_data and user_data[int(data[1])].get('imdb_temp'):
-        #    template = user_data[int(data[1])].get('imdb_temp')
-        #if not template:
         template = config_dict['IMDB_TEMPLATE']
         if imdb and template != "":
             cap = template.format(
@@ -220,7 +254,8 @@ async def imdb_callback(_, query):
             )
         else:
             cap = "No Results"
-        if imdb.get('poster'):
+        
+        if imdb and imdb.get('poster'):
             try:
                 await bot.send_photo(chat_id=query.message.reply_to_message.chat.id,  caption=cap, photo=imdb['poster'], reply_to_message_id=query.message.reply_to_message.id, reply_markup=InlineKeyboardMarkup(buttons))
             except (MediaEmpty, PhotoInvalidDimensions, WebpageMediaEmpty):
@@ -233,7 +268,6 @@ async def imdb_callback(_, query):
         await query.answer()
         await query.message.delete()
         await query.message.reply_to_message.delete()
-
 
 bot.add_handler(MessageHandler(imdb_search, filters=command(BotCommands.IMDBCommand) & CustomFilters.authorized & ~CustomFilters.blacklisted))
 bot.add_handler(CallbackQueryHandler(imdb_callback, filters=regex(r'^imdb')))
