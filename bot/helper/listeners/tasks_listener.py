@@ -45,10 +45,14 @@ from bot.helper.themes import BotTheme
 
 class MirrorLeechListener:
     def __init__(self, message, compress=False, extract=False, isQbit=False, isLeech=False, tag=None, select=False, seed=False, sameDir=None, rcFlags=None, upPath=None, isClone=False, 
-                join=False, drive_id=None, index_link=None, isYtdlp=False, source_url=None, logMessage=None, leech_utils={}):
+                join=False, drive_id=None, index_link=None, isYtdlp=False, source_url=None, logMessage=None, leech_utils={}, newname=''):
         if sameDir is None:
             sameDir = {}
         self.message = message
+        # Manual rename command value (e.g. -n/-name filename.mkv). When set, Auto Rename must not override it.
+        self.newname = newname
+        # Original Telegram caption of the source file (used as Season/Episode fallback for Auto Rename).
+        self.orig_caption = ""
         self.uid = message.id
         self.excep_chat = bool(str(message.chat.id) in config_dict['EXCEP_CHATS'].split())
         self.extract = extract
@@ -466,7 +470,7 @@ class MirrorLeechListener:
         if self.isSuperGroup and config_dict['INCOMPLETE_TASK_NOTIFIER'] and DATABASE_URL:
             await DbManger().rm_complete_task(self.message.link)
         user_id = self.message.from_user.id
-        name, _ = await format_filename(name, user_id, isMirror=not self.isLeech)
+        name, _ = await format_filename(name, user_id, isMirror=not self.isLeech, has_custom_name=bool(self.newname), caption=self.orig_caption)
         user_dict = user_data.get(user_id, {})
         msg = BotTheme('NAME', Name="Task has been Completed!"if config_dict['SAFE_MODE'] and self.isSuperGroup else escape(name))
         msg += BotTheme('SIZE', Size=get_readable_file_size(size))
