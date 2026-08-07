@@ -17,7 +17,7 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
     basenameX = re_sub(r'(^\s*-\s*|(\s*-\s*){2,})', '', basenameX)
 
     file_ext = os_path.splitext(file_name)[-1].lower()
-    if file_ext != '.mkv':
+    if file_ext not in ('.mkv', '.mp4'):
         return
 
     cmd = [bot_cache['pkgs'][2], '-i', media_file, '-map', '0']
@@ -63,7 +63,8 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
             'dubbed by': 'dubbed_by',
             'channel': 'channel',
             'website': 'website',
-            'source': 'source'
+            'source': 'source',
+            'official site': 'official_site'
         }
 
         for user_key, ff_key in mapping.items():
