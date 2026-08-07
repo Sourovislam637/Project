@@ -242,7 +242,7 @@ async def split_file(path, size, file_, dirpath, split_size, listener, start_tim
             LOGGER.error(err)
     return True
 
-async def format_filename(file_, user_id, dirpath=None, isMirror=False):
+async def format_filename(file_, user_id, dirpath=None, isMirror=False, has_custom_name=False, caption=""):
     orig_file = file_
     up_path = ospath.join(dirpath, orig_file) if dirpath else None
     
@@ -254,7 +254,7 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False):
         dur, qual, lang, subs = await get_media_info(up_path, True)
 
     if not isMirror:
-        file_ = get_autorename(file_, user_id, size=fsize, media_quality=qual, lang=lang, subs=subs)
+        file_ = get_autorename(file_, user_id, size=fsize, media_quality=qual, lang=lang, subs=subs, caption=caption, skip=has_custom_name)
 
     user_dict = user_data.get(user_id, {})
     ftag, ctag = ('m', 'MIRROR') if isMirror else ('l', 'LEECH')
