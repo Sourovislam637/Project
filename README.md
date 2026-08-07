@@ -1,21 +1,35 @@
-<div align=center>
+<div align="center">
 
-## KPSML-X: Ultimate Multi-Cloud Telegram Leech Bot
+# 🌌 Project-X: Ultimate Multi-Cloud Telegram Leech Bot
 
 <p>
-    <a href="https://github.com/Tamilupdates/KPSML-X">
+    <a href="https://github.com/Sourovislam637/Project-X">
         <kbd>
-            <img src="https://graph.org/file/879239eb830dd6c00b07e.jpg" width="550" alt="KPSML-X Logo">
+            <img src="https://graph.org/file/879239eb830dd6c00b07e.jpg" width="550" alt="Project-X Logo">
         </kbd>
     </a>
 </p>
 
-<a href="https://github.com/Tamilupdates/KPSML-X/fork"><img alt="Forks" src="https://img.shields.io/github/forks/Tamilupdates/KPSML-X?style=plastic&logo=git&color=orange&label=Forks"></a> 
-<a href="https://github.com/Tamilupdates/KPSML-X/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/Tamilupdates/KPSML-X?style=plastic&logo=github&color=FFD700&label=Stars"></a>
-<a href="https://hub.docker.com/r/nanthakps/kpsmlx"><img src="https://img.shields.io/docker/pulls/nanthakps/kpsmlx?style=plastic&logo=docker&label=Pulls" alt="Docker Pulls"></a>
+<p align="center">
+  <a href="https://github.com/Sourovislam637/Project-X/fork">
+    <img alt="Forks" src="https://img.shields.io/github/forks/Sourovislam637/Project-X?style=for-the-badge&logo=git&color=orange">
+  </a> 
+  <a href="https://github.com/Sourovislam637/Project-X/stargazers">
+    <img alt="Stars" src="https://img.shields.io/github/stars/Sourovislam637/Project-X?style=for-the-badge&logo=github&color=FFD700">
+  </a>
+  <a href="https://github.com/Sourov-Nobita">
+    <img alt="Creator" src="https://img.shields.io/badge/Creator-Sourov_Nobita-blue?style=for-the-badge&logo=github">
+  </a>
+</p>
 
-<a href="https://telegram.me/KPSBots"><img alt="Telegram Channel" img src="https://img.shields.io/badge/Join%20on%20Telegram%20Channel-0088CC?style=plastic&logo=telegram&logoColor=white&labelColor=0A3D62" width="250"></a>
-
+<p align="center">
+  <a href="https://t.me/Rare_Bots_Hub">
+    <img alt="Update Channel" src="https://img.shields.io/badge/Updates%20Channel-0088CC?style=for-the-badge&logo=telegram&logoColor=white">
+  </a>
+  <a href="https://t.me/Rare_Leech_Mirror_Hub">
+    <img alt="Leech Mirror Channel" src="https://img.shields.io/badge/Leech%20Mirror%20Hub-0A3D62?style=for-the-badge&logo=telegram&logoColor=white">
+  </a>
+</p>
 
 #### ***⚡️ Download Anything. Upload Everywhere. 🔥***
 
@@ -30,29 +44,21 @@
 ## 📌 Key Highlights
 
 <details>
-  <summary><strong>View All Highlights  <kbd>Click Here</kbd></strong></summary>
+  <summary><strong>✨ View All Features (Click to Expand)</strong></summary>
 
 ---
 
-_KPSML-X is designed to make file management seamless, fast, and flexible._
+_Project-X is designed to make file management seamless, fast, and flexible._
 
 - **🌐 Universal Downloader** - Supports torrents, Mega, Google Drive, direct links, and all `yt-dlp` sites.  
-
 - **☁️ Cloud Uploader** - Upload files to Google Drive, Telegram Cloud, Rclone, or DDL servers with ease.  
-
 - **📦 Smart File Handling** - Automatic renaming, metadata tagging, and organization.  
-
 - **🧠 Intelligent Automation** - Auto-resume, retry, and cleanup for 24×7 reliability.  
-
 - **⚙️ Advanced Controls** - Manage downloads, uploads, and settings directly from Telegram (`/bs`, `/mirror`, `/leech`).  
-
 - **🎯 Multi-Deployment Ready** - Deploy on Heroku, Docker, VPS, or Google Colab.  
-
 - **🔐 Secure & Private** - Owner-only commands, user whitelisting, and access control.  
-
 - **💨 Lightweight Performance** - Optimized Python & Pyrogram async engine for speed.  
-
-- **💬 Active Community Support** - Join **[@KPSBots](https://telegram.me/KPSBots)** for updates and help.
+- **💬 Active Community Support** - Join **[@Rare_Bots_Hub](https://t.me/Rare_Bots_Hub)** for updates and help.
 
 </details>
 
@@ -61,12 +67,11 @@ _KPSML-X is designed to make file management seamless, fast, and flexible._
 ## 🚀 Deployment Guide (VPS)
 
 <details>
-  <summary><strong>View All Steps  <kbd>Click Here</kbd></strong></summary>
+  <summary><strong>⚙️ View VPS Setup Steps (Click to Expand)</strong></summary>
 
 ---
 
-## 1. Prerequisites
-
+### 1. Prerequisites
 - **Tutorial Video from A to Z (Latest Video)**
 - Special thanks to [Wiszky](https://github.com/vishnoe115)
 
@@ -74,328 +79,132 @@ _KPSML-X is designed to make file management seamless, fast, and flexible._
 
 ---
 
-## 2. Installing Requirements
+### 2. Installing Requirements
 
 Clone this repository:
 
 ```bash
-git clone https://github.com/Tamilupdates/KPSML-X kpsml-x && cd kpsml-x
-```
+git clone [https://github.com/Sourovislam637/Project-X](https://github.com/Sourovislam637/Project-X) project-x && cd project-x
 
 Setting up config file:
-    
-```
 cp config_sample.env config.env
-```
 
-- Remove the first line saying:
-
-```
+ * Remove the first line saying:
 _____REMOVE_THIS_LINE_____=True
-```
 
-_Fill up rest of the fields. Meaning of each field is discussed below._
+Fill up the rest of the fields. Meaning of each field is discussed below.
+NOTE: All values must be filled between quotes, even if it's Int, Bool or List.
+3. Build and Run the Docker Image
+Make sure you mount the app folder and install Docker following the official documentation.
+3.1 Using Official Docker Commands
+ * Start Docker daemon (skip if already running):
+   sudo dockerd
 
-**NOTE**: All values must be filled between quotes, even if it's `Int`, `Bool` or `List`.
+ * Build the Docker image:
+   sudo docker build . -t projectx
 
----
+ * Run the image:
+   sudo docker run -p 80:80 -p 8080:8080 projectx
 
-## 3. Build and Run the Docker Image
+ * To stop the running image:
+   sudo docker ps
+sudo docker stop <container_id>
 
-*Make sure you mount the app folder and install Docker following the official documentation.*
+3.2 Using docker-compose (Recommended)
+Note: If you want to use ports other than 80 and 8080, update them in docker-compose.yml.
+ * Install docker-compose:
+   sudo apt install docker-compose
 
-There are two methods to build and run the Docker image:
+ * Build and run the Docker image:
+   sudo docker-compose up
 
-### 3.1 Using Official Docker Commands
+ * Rebuild after editing files:
+   sudo docker-compose up --build
 
-- **Start Docker daemon** (skip if already running):
+ * Stop or Restart the image:
+   sudo docker-compose stop
+sudo docker-compose start
 
-  ```bash
-  sudo dockerd
-  ```
-
-- **Build the Docker image:**
-
-  ```bash
-  sudo docker build . -t kpsmlx
-  ```
-
-- **Run the image:**
-
-  ```bash
-  sudo docker run -p 80:80 -p 8080:8080 kpsmlx
-  ```
-
-- **To stop the running image:**
-
-  First, list running containers:
-
-  ```bash
-  sudo docker ps
-  ```
-
-  Then, stop the container using its ID:
-
-  ```bash
-  sudo docker stop <container_id>
-  ```
-
----
-
-### 3.2 Using docker-compose (Recommended)
-
-**Note:** If you want to use ports other than 80 and 8080 for torrent file selection and rclone serve respectively, update them in [docker-compose.yml](https://github.com/Tamilupdates/KPSML-X/blob/main/docker-compose.yml).
-
-- **Install docker-compose:**
-
-  ```bash
-  sudo apt install docker-compose
-  ```
-
-- **Build and run the Docker image (or view the current running image):**
-
-  ```bash
-  sudo docker-compose up
-  ```
-
-- **After editing files (e.g., using nano to edit start.sh), rebuild:**
-
-  ```bash
-  sudo docker-compose up --build
-  ```
-
-- **To stop the running image:**
-
-  ```bash
-  sudo docker-compose stop
-  ```
-
-- **To restart the image:**
-
-  ```bash
-  sudo docker-compose start
-  ```
-
-- **To view the latest logs from the running container (after mounting the folder):**
-
-  ```bash
-  sudo docker-compose up
-  ```
-
-- **Tutorial Video for docker-compose and checking ports:**
-
-  [![See Video](https://img.shields.io/badge/See%20Video-black?style=for-the-badge&logo=YouTube)](https://youtu.be/c8_TU1sPK08)
-
-
-------
-
-#### Docker Notes
-
-**IMPORTANT NOTES**:
-
-1. Set `BASE_URL_PORT` and `RCLONE_SERVE_PORT` variables to any port you want to use. Default is `80` and `8080` respectively.
-2. You should stop the running image before deleting the container and you should delete the container before the image.
-3. To delete the container (this will not affect on the image):
-
-```
-sudo docker container prune
-```
-
-4. To delete te images:
-
-```
-sudo docker image prune -a
-```
-
-5. Check the number of processing units of your machine with `nproc` cmd and times it by 4, then edit `AsyncIOThreadsCount` in qBittorrent.conf.
-    
-  </li></ol>
+See Video
+📝 Docker Notes
+ * Set BASE_URL_PORT and RCLONE_SERVE_PORT variables to any port you want to use. Default is 80 and 8080 respectively.
+ * Stop the running image before deleting the container. Delete the container before the image.
+ * To delete the container: sudo docker container prune
+ * To delete images: sudo docker image prune -a
+ * Edit AsyncIOThreadsCount in qBittorrent.conf depending on your processing units.
 </details>
-
----
-
-## 🚀 Deployment Guide (Heroku CLI)
+🚀 Deployment Guide (Heroku CLI)
 <details>
-  <summary><strong>View All Steps  <kbd>Click Here</kbd></strong></summary>
-  
----
-  
-**Step 1 :** Git clone this Repo and change directory
+<summary><strong>☁️ View Heroku Setup Steps (Click to Expand)</strong></summary>
+Step 1: Git clone this Repo and change directory
+> Make sure git is Installed in your system or quick run apt-get install git pip curl -y
+> 
+git clone [https://github.com/Sourovislam637/Project-X](https://github.com/Sourovislam637/Project-X) project-x && cd project-x 
 
-> Make sure git is Installed in your system or quick run `apt-get install git pip curl -y`
+Step 2: Install Heroku in your System
+> For Android : Use termux (Download via FDroid) for CLI usage
+> 
+curl [https://cli-assets.heroku.com/install.sh](https://cli-assets.heroku.com/install.sh) | sh
 
-```shell
-git clone https://github.com/Tamilupdates/KPSML-X kpsml-x && cd kpsml-x 
-```
-
----
-
-**Step 2 :** Now Install Heroku in your Sytem or checkout Official Heroku Deploy Docs, or Download via `apt-get` or `npm`
-
-> For Android : Use `termux` (Download via FDroid) for CLI usage
-
-**The script requires sudo and isn’t Windows compatible.**
-
-```shell
-curl https://cli-assets.heroku.com/install.sh | sh
-```
-
-**Install with Ubuntu / Debian apt-get**
-
-```shell
-curl https://cli-assets.heroku.com/install-ubuntu.sh | sh
-```
-
-**Install via `npm` (Not Recommanded)**
-
-```shell
-npm install -g heroku
-```
-
-**Official Heroku Install Guide :** [Check Here](https://devcenter.heroku.com/articles/heroku-cli#install-the-heroku-cli)
-
----
-
-**Step 3 :** Login into Heroku and Log In CLI via Browser 
-
-_With Browser_
-
-```shell
-heroku login
-```
-
-**OR**
-
-_Without Browser_
-
-```shell
+(Check official Heroku docs for Ubuntu apt-get or Windows installation)
+Step 3: Login into Heroku via CLI
 heroku login -i
-```
 
-- Put `Heroku Email` : Heroku Email `email@example.com`
-
-- Put `Heroku Password` : Heroku API Key. Get from [Here](https://dashboard.heroku.com/account)
-
----
-
-**Step 4 :** Create Heroku App and specify stack and region with App Name
-
-```shell
+ * Put Heroku Email and Heroku API Key (Get from Here)
+Step 4: Create Heroku App
 heroku create --region us --stack container APP_NAME
-```
 
-**To Be Noted**: Copy the `BASE_URL` after the App is Created and Put the Value in `BASE_URL` when editing `config.env`
-
-**Notes:**
-- `--region us` for United States Server.
-
-- `--region eu` for Europe Server.
-
-- `APP_NAME` should be replaced with your unique app name _(Optional)_. If not given it generates a random name.
-
-- `--stack container` for setting stack to container for Dockerfile.
-
-- `--buildpack heroku/python` for using build slug for repo deploy and build.
-
----
-
-**Step 5 :** Now set all the Required Variables and Files into this Branch MAIN Repo like config.env, accounts.zip, token.pickle, All Private Files(optional)- 
-
-  > Only config.env Mabdatory with Only Mandatory Vars Only, After that Put all Private Files or Vars via Bot Settings `/bs`
-
-**To Edit Inside CLI (nano Editor):** _(Termux Users)_
-
-```shell
+(Copy the BASE_URL generated after App creation for config.env)
+Step 5: Set up configuration files
+To Edit Inside CLI (nano Editor):
 nano config.env
-```
 
-- **Sample config.env** _(Copy these and Paste in Editor and Fill Up)_
-  ```
-  BOT_TOKEN = ""
-  TELEGRAM_API = ""
-  TELEGRAM_HASH = ""
-  OWNER_ID = ""
-  DATABASE_URL = ""
-  BASE_URL = ""
-  SET_COMMANDS = "True"
-  UPSTREAM_REPO = "https://github.com/Tamilupdates/KPSML-X"
-  UPSTREAM_BRANCH = "kpsmlx"
-  ```
-- After Setup Exit from Editor via `CTRL + X`, followed via `y` and `Enter`...
+ * Sample config.env (Copy these and Paste in Editor and Fill Up)
+   BOT_TOKEN = "YOUR_BOT_TOKEN"
+TELEGRAM_API = "YOUR_API_ID"
+TELEGRAM_HASH = "YOUR_API_HASH"
+OWNER_ID = "YOUR_ID"
+DATABASE_URL = "MONGODB_URL"
+BASE_URL = "APP_URL"
+SET_COMMANDS = "True"
+UPSTREAM_REPO = "[https://github.com/Sourovislam637/Project-X](https://github.com/Sourovislam637/Project-X)"
+UPSTREAM_BRANCH = "main"
 
-**Helpful Commands:**
-
-- **Exit from nano** : `CTRL + X`
-- **Save File** : `CTRL + S`
-- **Check Help** : `CTRL + G`
-- **Undo Changes** : `ALT + U`
-- ^ means CTRL _(Termux Users)_
-
----
-
-**Step 6 :** Set Local git remote for Heroku. Give All Commands One by One.
-
-```shell
+ * Exit from Editor via CTRL + X, followed via y and Enter.
+Step 6: Set Local git remote for Heroku
 git add . -f
-git commit -m "HK Setup"
+git commit -m "Heroku Setup"
 heroku git:remote -a APP_NAME
-```
 
----
-
-**Step 7 :** Now push to Heroku via git forcefully to build.
-
-```shell
+Step 7: Push to Heroku
 git push heroku main -f
-```
 
-**Heroku Logs:** When checking Logs, Use this will give Complete Logs.
+Heroku Logs: Use this command for Live Stream Logs:
+heroku logs -a APP_NAME -t
 
-```shell
-heroku logs -a APP_NAME
-```
-
-- Add arg `-t` for Live Stream Logs and Use `CTRL + C` to Exit from it.
-
----
-
-**All Heroku CLI Commands :** [Click Here](https://devcenter.heroku.com/articles/heroku-cli-commands#heroku-config-set)
 </details>
-
----
-
-## 🛠️ Variables Descriptions
-
+🛠️ Variables Descriptions
 <details>
-  <summary><b>View All Variables  <kbd>Click Here</kbd></b></summary>
-
-- `BOT_TOKEN`: Telegram Bot Token that you got from [BotFather](https://t.me/BotFather). `Str`
-
-- `OWNER_ID`: Telegram User ID (not username) of the Owner of the bot. `Int`
-
-- `TELEGRAM_API`: This is to authenticate your Telegram account for downloading Telegram files. You can get this from <https://my.telegram.org>. `Int`
-
-- `TELEGRAM_HASH`: This is to authenticate your Telegram account for downloading Telegram files. You can get this from <https://my.telegram.org>. `Str`
-
-- `BASE_URL`: Valid BASE URL where the bot is deployed to use torrent web files selection.
-  - ***Heroku Deployment***: Format of URL should be `https://app-name-random_code.herokuapp.com/`, where `app-name` is the name of your heroku app Paste the URL got when the App was Made. `Str`
-
-  - ***VPS Deployment***: Format of URL should be `http://myip`, where `myip` is the IP/Domain(public) of your bot or if you have chosen port other than `80` so write it in this format `http://myip:port` (`http` and not `https`). `Str`
-
-- `DATABASE_URL`: Database URL of MongoDb to store all your files and Vars. Adding this will be Helpful. `Str`
-
-- `UPSTREAM_REPO`: GitHub repository URL, if your repo is private add `https://username:{githubtoken}@github.com/{username}/{reponame}` format. `Str`.
-    - **NOTE**:
-        - Any change in docker you need to deploy/build again with updated repo to take effect. 
-        - **No Need to delete .gitignore file or any File**
-
-- `UPSTREAM_BRANCH`: Upstream branch for update. Default is `kpsmlx`. `Str`
-
+<summary><b>⚙️ View All Variables (Click to Expand)</b></summary>
+ * BOT_TOKEN: Telegram Bot Token that you got from BotFather. Str
+ * OWNER_ID: Telegram User ID (not username) of the Owner of the bot. Int
+ * TELEGRAM_API: This is to authenticate your Telegram account for downloading Telegram files. You can get this from https://my.telegram.org. Int
+ * TELEGRAM_HASH: This is to authenticate your Telegram account for downloading Telegram files. You can get this from https://my.telegram.org. Str
+ * BASE_URL: Valid BASE URL where the bot is deployed to use torrent web files selection.
+   * Heroku Deployment: https://app-name-random_code.herokuapp.com/ Str
+   * VPS Deployment: http://myip or http://myip:port. Str
+ * DATABASE_URL: Database URL of MongoDb to store all your files and Vars. Str
+ * UPSTREAM_REPO: GitHub repository URL. https://github.com/Sourovislam637/Project-X Str
+ * UPSTREAM_BRANCH: Upstream branch for update. Default is main or your designated branch. Str
 </details>
+🌟 Credits & Official Channels
+A massive thanks to everyone who helped shape this project.
+| Role | Details & Link |
+|---|---|
+| 👑 Creator & Owner | Sourov Nobita ( GitHub ) |
+| 🚀 Powered By / Updates | Rare Bots Hub |
+| 🗂️ Leech Mirror Channel | Rare Leech Mirror Hub |
+| 🌐 Main Source Repo | Project-X Repository |
+> Don't forget to ⭐ star the repository if you found it useful!
+> 
 
----
-
-## 🌿 Branch Specifications
-
-- All files to be Uploaded in `main` Branch and set Upstream as `kpsmlx` Branch.
-- View the **Upstream Branch**: **[kpsmlx](https://github.com/Tamilupdates/KPSML-X/tree/kpsmlx)**
