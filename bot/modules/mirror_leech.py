@@ -335,9 +335,10 @@ async def _mirror_leech(client, message, isQbit=False, isLeech=False, sameDir=No
 
     listener = MirrorLeechListener(message, compress, extract, isQbit, isLeech, tag, select, seed,
                                     sameDir, rcf, up, join, drive_id=drive_id, index_link=index_link, 
-                                    source_url=org_link or link, leech_utils={'screenshots': sshots, 'thumb': thumb})
+                                    source_url=org_link or link, leech_utils={'screenshots': sshots, 'thumb': thumb}, newname=name)
 
     if file_ is not None:
+        listener.orig_caption = reply_to.caption or ""
         await delete_links(message)
         await TelegramDownloadHelper(listener).add_download(reply_to, f'{path}/', name, session, decrypter)
     elif isinstance(link, dict):
