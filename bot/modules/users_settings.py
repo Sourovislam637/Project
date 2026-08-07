@@ -224,7 +224,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             text += "➲ <i>No custom metadata configured yet. Default values will be used.</i>"
         text += "\n<i>Click on any field below to modify its value manually:</i>"
         
-        meta_keys = ["Title", "Author", "Artist", "Audio", "Subtitle", "Video", "Encoded By", "Custom Tag", "Comment", "Dubbed By", "Channel", "Website", "Copyright", "Publisher", "Encoder", "Source", "Studio"]
+        meta_keys = ["Title", "Author", "Artist", "Audio", "Subtitle", "Video", "Encoded By", "Custom Tag", "Comment", "Dubbed By", "Channel", "Website", "Copyright", "Publisher", "Encoder", "Source", "Studio", "Official Site"]
         for index, mkey in enumerate(meta_keys):
             has_val = "✅ " if mkey in meta_dict else "❌ "
             buttons.ibutton(f"{has_val}{mkey}", f"userset {user_id} md_edit {index}")
@@ -507,7 +507,7 @@ async def set_all_metadata(client, message, pre_event):
     handler_dict[user_id] = False
     value = message.text.strip() if message.text else ""
     if value:
-        meta_keys = ["Title", "Author", "Artist", "Audio", "Subtitle", "Video", "Encoded By", "Custom Tag", "Comment", "Dubbed By", "Channel", "Website", "Copyright", "Publisher", "Encoder", "Source", "Studio"]
+        meta_keys = ["Title", "Author", "Artist", "Audio", "Subtitle", "Video", "Encoded By", "Custom Tag", "Comment", "Dubbed By", "Channel", "Website", "Copyright", "Publisher", "Encoder", "Source", "Studio", "Official Site"]
         new_meta_str = '|'.join([f"{k}:{value}" for k in meta_keys])
         update_user_ldata(user_id, 'metadata', new_meta_str)
     else:
@@ -774,7 +774,7 @@ async def edit_user_settings(client, query):
     elif data[2] == 'md_edit':
         await query.answer()
         idx = int(data[3])
-        meta_keys = ["Title", "Author", "Artist", "Audio", "Subtitle", "Video", "Encoded By", "Custom Tag", "Comment", "Dubbed By", "Channel", "Website", "Copyright", "Publisher", "Encoder", "Source", "Studio"]
+        meta_keys = ["Title", "Author", "Artist", "Audio", "Subtitle", "Video", "Encoded By", "Custom Tag", "Comment", "Dubbed By", "Channel", "Website", "Copyright", "Publisher", "Encoder", "Source", "Studio", "Official Site"]
         mkey = meta_keys[idx]
         text = f"⚙️ <b><u>Set Leech Metadata: {mkey}</u></b>\n\nSend the value you want to assign to <b>{mkey}</b>.\n\n<b>Timeout:</b> 60 sec"
         buttons = ButtonMaker()
