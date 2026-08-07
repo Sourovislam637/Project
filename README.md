@@ -1,283 +1,319 @@
+<!-- Header Section -->
 <div align="center">
 
-# 🌌 Project-X: Ultimate Multi-Cloud Telegram Leech Bot
+# 🌌 PROJECT-X
+## The Ultimate Multi-Cloud Telegram Leech & Mirror Bot
 
-<p>
+<p align="center">
     <a href="https://github.com/Sourovislam637/Project-X">
         <kbd>
-            <img src="https://i.ibb.co/zTHm92cG/image.jpg" width="550" alt="Project-X Logo">
+            <img src="https://i.ibb.co/zTHm92cG/image.jpg" width="600" alt="Project-X Dynamic Banner">
         </kbd>
     </a>
 </p>
 
+<!-- GitHub Stat Badges -->
 <p align="center">
   <a href="https://github.com/Sourovislam637/Project-X/fork">
-    <img alt="Forks" src="https://img.shields.io/github/forks/Sourovislam637/Project-X?style=for-the-badge&logo=git&color=orange">
+    <img alt="Forks" src="https://img.shields.io/github/forks/Sourovislam637/Project-X?style=for-the-badge&logo=git&color=FF6F00&labelColor=1a1a1a">
   </a> 
   <a href="https://github.com/Sourovislam637/Project-X/stargazers">
-    <img alt="Stars" src="https://img.shields.io/github/stars/Sourovislam637/Project-X?style=for-the-badge&logo=github&color=FFD700">
+    <img alt="Stars" src="https://img.shields.io/github/stars/Sourovislam637/Project-X?style=for-the-badge&logo=github&color=FFD700&labelColor=1a1a1a">
+  </a>
+  <a href="https://github.com/Sourovislam637/Project-X/issues">
+    <img alt="Issues" src="https://img.shields.io/github/issues/Sourovislam637/Project-X?style=for-the-badge&logo=github&color=FF4500&labelColor=1a1a1a">
+  </a>
+  <a href="https://github.com/Sourovislam637/Project-X/blob/main/LICENSE">
+    <img alt="License" src="https://img.shields.io/github/license/Sourovislam637/Project-X?style=for-the-badge&logo=open-source-initiative&color=00BFFF&labelColor=1a1a1a">
   </a>
 </p>
 
-#### ***⚡️ Download Anything. Upload Everywhere. 🔥***
+<!-- Author Badges -->
+<p align="center">
+  <a href="https://github.com/Sourov-Nobita">
+    <img alt="Creator" src="https://img.shields.io/badge/Creator-Sourov__Nobita-8A2BE2?style=for-the-badge&logo=github&labelColor=1a1a1a">
+  </a>
+  <a href="https://t.me/Sourov_Nobita">
+    <img alt="Owner Telegram" src="https://img.shields.io/badge/Contact-Telegram-0088CC?style=for-the-badge&logo=telegram&logoColor=white&labelColor=1a1a1a">
+  </a>
+</p>
 
----
+<!-- Channel Badges -->
+<p align="center">
+  <a href="https://t.me/Rare_Bots_Hub">
+    <img alt="Update Channel" src="https://img.shields.io/badge/Powered_By-Rare_Bots_Hub-28A745?style=for-the-badge&logo=telegram&logoColor=white&labelColor=1a1a1a">
+  </a>
+  <a href="https://t.me/Rare_Leech_Mirror_Hub">
+    <img alt="Leech Mirror Channel" src="https://img.shields.io/badge/Official_Group-Leech_Mirror_Hub-FFC107?style=for-the-badge&logo=telegram&logoColor=black&labelColor=1a1a1a">
+  </a>
+</p>
 
-### <img src="https://graph.org/file/504ba776ef0724a4ae85b.png" width="25" alt="Google Colab Logo"> Google Colab : [Deploy Link](https://colab.research.google.com/drive/1ntoqoj3jDq2FtU2-joizh0DO64uoec9q)
+<br>
+
+> #### ⚡️ *Download Anything. Upload Everywhere. Effortlessly.* 🔥
+
+<a href="https://colab.research.google.com/drive/1ntoqoj3jDq2FtU2-joizh0DO64uoec9q">
+  <img src="https://img.shields.io/badge/Deploy%20on-Google%20Colab-F9AB00?style=for-the-badge&logo=googlecolab&logoColor=white" alt="Deploy on Google Colab">
+</a>
+
+<br><br>
 
 </div>
 
 ---
 
-## 📌 Key Highlights
+## 📖 Introduction
 
-<details>
-  <summary><strong>✨ View All Features (Click to Expand)</strong></summary>
+**Project-X** is an advanced, high-performance, and feature-rich Telegram Bot built for seamless file downloading, mirroring, and leeching. Designed with optimal async processing, it can handle heavy workloads reliably 24/7. Whether you want to download a massive torrent, fetch a direct link, or mirror a file to your cloud drive—Project-X has got you covered!
 
 ---
 
-_Project-X is designed to make file management seamless, fast, and flexible._
+## ✨ Outstanding Features
 
-- **🌐 Universal Downloader** - Supports torrents, Mega, Google Drive, direct links, and all `yt-dlp` sites.  
-- **☁️ Cloud Uploader** - Upload files to Google Drive, Telegram Cloud, Rclone, or DDL servers with ease.  
-- **📦 Smart File Handling** - Automatic renaming, metadata tagging, and organization.  
-- **🧠 Intelligent Automation** - Auto-resume, retry, and cleanup for 24×7 reliability.  
-- **⚙️ Advanced Controls** - Manage downloads, uploads, and settings directly from Telegram (`/bs`, `/mirror`, `/leech`).  
-- **🎯 Multi-Deployment Ready** - Deploy on Heroku, Docker, VPS, or Google Colab.  
-- **🔐 Secure & Private** - Owner-only commands, user whitelisting, and access control.  
-- **💨 Lightweight Performance** - Optimized Python & Pyrogram async engine for speed.  
-- **💬 Active Community Support** - Join **[@Rare_Bots_Hub](https://t.me/Rare_Bots_Hub)** for updates and help.
+Project-X comes packed with an array of premium features designed to give you ultimate control over your file management.
+
+<details>
+<summary><b>🛠️ Click to Reveal All Features</b></summary>
+
+### 🌐 The Ultimate Downloader
+- **Torrent Support**: Download magnet links, `.torrent` files with ultra-fast speed using qBittorrent / aria2.
+- **Direct Links**: Lightning-fast downloading for direct file links.
+- **yt-dlp Integration**: Download audio, video, or playlists from YouTube and 1000+ other supported platforms.
+- **Mega & GDrive**: Fetch files natively from Mega.nz and Google Drive.
+
+### ☁️ Multi-Cloud Uploader
+- **Telegram Cloud**: Leech files directly to Telegram as documents or media (up to 4GB with premium).
+- **Google Drive**: Seamlessly mirror files to your personal GDrive or Shared Drives.
+- **Rclone Integration**: Upload to hundreds of cloud storages (OneDrive, Dropbox, etc.) natively.
+- **DDL Servers**: Push files directly to your preferred Direct Download links servers.
+
+### 🧠 Smart File Processing
+- **Metadata Management**: Automatically rename, tag, and organize files based on extensions.
+- **Thumbnail Support**: Custom thumbnails for media files uploaded to Telegram.
+- **Archive Extractor**: Automatically extract `.zip`, `.rar`, `.tar`, and `.7z` files.
+- **Archive Creator**: Compress folders and files on the go before uploading.
+
+### ⚙️ Automation & Reliability
+- **Auto-resume**: Resumes interrupted tasks flawlessly.
+- **Task Scheduling**: Queue management for heavy traffic, ensuring smooth operations.
+- **Auto-Cleanup**: Intelligently cleans up server space after successful uploads.
+
+### 🛡️ Admin & Security Controls
+- **Owner Only Mode**: Restrict bot usage strictly to the owner.
+- **Authorized Chats**: Whitelist specific groups or users to use the bot.
+- **Interactive UI**: Manage everything via dynamic Telegram inline buttons (`/bs`, `/settings`).
 
 </details>
 
 ---
 
-## 🚀 Deployment Guide (VPS)
+## 🛠️ Infrastructure & Requirements
+
+Before you deploy the bot, make sure you have the following ready:
+
+| Requirement | Description | Status |
+| :--- | :--- | :---: |
+| **Telegram API ID & Hash** | Get it from [my.telegram.org](https://my.telegram.org/) | 🟢 |
+| **Telegram Bot Token** | Create a bot via [@BotFather](https://t.me/BotFather) | 🟢 |
+| **MongoDB URI** | Required for database & storing settings ([MongoDB Atlas](https://www.mongodb.com/)) | 🟢 |
+| **Server/VPS** | Minimum 1GB RAM, Ubuntu 20.04+ recommended | 🟡 |
+| **Docker** | For seamless deployment on VPS/Servers | 🟡 |
+
+---
+
+## 🚀 Deployment Guide (VPS / Dedicated Server)
+
+Deploying on a VPS is the most reliable way to run Project-X. We highly recommend using Docker for this.
 
 <details>
-  <summary><strong>⚙️ View VPS Setup Steps (Click to Expand)</strong></summary>
+<summary><b>💻 Expand for Detailed VPS Setup Guide</b></summary>
 
----
+### 📌 Step 1: Initial Preparation
 
-### 1. Prerequisites
-- **Tutorial Video from A to Z (Latest Video)**
-- Special thanks to [Wiszky](https://github.com/vishnoe115)
+**Video Tutorial (Highly Recommended)**  
+*Thanks to [Wiszky](https://github.com/vishnoe115) for the detailed walkthrough!*  
+[![Watch Video Tutorial](https://img.shields.io/badge/Watch_VPS_Tutorial-FF0000?style=for-the-badge&logo=YouTube&logoColor=white)](https://youtu.be/xzLOLyKYl54)
 
-[![See Video](https://img.shields.io/badge/See%20Video-black?style=for-the-badge&logo=YouTube)](https://youtu.be/xzLOLyKYl54)
+### 📌 Step 2: Clone the Repository
 
----
-
-### 2. Installing Requirements
-
-Clone this repository:
-
+Log in to your server terminal (SSH) and run:
 ```bash
-git clone [https://github.com/Sourovislam637/Project-X](https://github.com/Sourovislam637/Project-X) project-x && cd project-x
+sudo apt update && sudo apt upgrade -y
+sudo apt install git -y
+git clone [https://github.com/Sourovislam637/Project-X](https://github.com/Sourovislam637/Project-X) project-x
+cd project-x
 ```
 
-Setting up config file:
-    
+### 📌 Step 3: Configure Environment Variables
+
+You need to set up the `config.env` file.
 ```bash
 cp config_sample.env config.env
+nano config.env
+```
+* **IMPORTANT**: Remove the first line (`_____REMOVE_THIS_LINE_____=True`).
+* Fill in all the variables carefully. All values must be inside quotes `""`.
+* Press `CTRL + X`, then `Y`, then `ENTER` to save and exit.
+
+### 📌 Step 4: Build & Run via Docker (Recommended)
+
+Make sure Docker and Docker-Compose are installed on your system.
+
+**Method A: Using Docker Compose** (Best for easy management)
+```bash
+sudo apt install docker-compose -y
+# Build and Start the bot in detached mode
+sudo docker-compose up -d --build
+```
+*To stop the bot:*
+```bash
+sudo docker-compose down
+```
+*To view live logs:*
+```bash
+sudo docker-compose logs -f
 ```
 
-- Remove the first line saying:
-
-```env
-_____REMOVE_THIS_LINE_____=True
+**Method B: Using Standard Docker Commands**
+```bash
+# Build the image
+sudo docker build . -t projectx
+# Run the image
+sudo docker run -d -p 80:80 -p 8080:8080 projectx
 ```
 
-_Fill up the rest of the fields. Meaning of each field is discussed below._
-**NOTE**: All values must be filled between quotes, even if it's `Int`, `Bool` or `List`.
-
----
-
-### 3. Build and Run the Docker Image
-
-*Make sure you mount the app folder and install Docker following the official documentation.*
-
-#### 3.1 Using Official Docker Commands
-
-- **Start Docker daemon** (skip if already running):
-  ```bash
-  sudo dockerd
-  ```
-- **Build the Docker image:**
-  ```bash
-  sudo docker build . -t projectx
-  ```
-- **Run the image:**
-  ```bash
-  sudo docker run -p 80:80 -p 8080:8080 projectx
-  ```
-- **To stop the running image:**
-  ```bash
-  sudo docker ps
-  sudo docker stop <container_id>
-  ```
-
----
-
-#### 3.2 Using docker-compose (Recommended)
-
-**Note:** If you want to use ports other than `80` and `8080`, update them in `docker-compose.yml`.
-
-- **Install docker-compose:**
-  ```bash
-  sudo apt install docker-compose
-  ```
-- **Build and run the Docker image:**
-  ```bash
-  sudo docker-compose up
-  ```
-- **Rebuild after editing files:**
-  ```bash
-  sudo docker-compose up --build
-  ```
-- **Stop or Restart the image:**
-  ```bash
-  sudo docker-compose stop
-  sudo docker-compose start
-  ```
-
-[![See Video](https://img.shields.io/badge/See%20Video-black?style=for-the-badge&logo=YouTube)](https://youtu.be/c8_TU1sPK08)
-
-#### 📝 Docker Notes
-1. Set `BASE_URL_PORT` and `RCLONE_SERVE_PORT` variables to any port you want to use. Default is `80` and `8080` respectively.
-2. Stop the running image before deleting the container. Delete the container before the image.
-3. To delete the container: `sudo docker container prune`
-4. To delete images: `sudo docker image prune -a`
-5. Edit `AsyncIOThreadsCount` in qBittorrent.conf depending on your processing units.
+> **Note on Ports:** If you need to change the default ports, modify the `BASE_URL_PORT` (default `80`) and `RCLONE_SERVE_PORT` (default `8080`) in your config and `docker-compose.yml`.
 
 </details>
 
 ---
 
-## 🚀 Deployment Guide (Heroku CLI)
+## ☁️ Deployment Guide (Heroku CLI)
+
+Deploying to Heroku is a great free/cheap alternative.
 
 <details>
-  <summary><strong>☁️ View Heroku Setup Steps (Click to Expand)</strong></summary>
-  
----
-  
-**Step 1:** Git clone this Repo and change directory
+<summary><b>🚀 Expand for Detailed Heroku Setup Guide</b></summary>
 
-> Make sure git is Installed in your system or quick run `apt-get install git pip curl -y`
-
-```shell
-git clone [https://github.com/Sourovislam637/Project-X](https://github.com/Sourovislam637/Project-X) project-x && cd project-x 
+### 📌 Step 1: Install Dependencies
+You need `git` and `curl` installed on your local machine or Termux (Android).
+```bash
+git clone [https://github.com/Sourovislam637/Project-X](https://github.com/Sourovislam637/Project-X) project-x
+cd project-x
 ```
 
-**Step 2:** Install Heroku in your System
-
-> For Android : Use `termux` (Download via FDroid) for CLI usage
-
-```shell
+### 📌 Step 2: Install Heroku CLI
+For Ubuntu/Debian or Termux:
+```bash
 curl [https://cli-assets.heroku.com/install.sh](https://cli-assets.heroku.com/install.sh) | sh
 ```
-*(Check official Heroku docs for Ubuntu `apt-get` or Windows installation)*
 
-**Step 3:** Login into Heroku via CLI
-
-```shell
+### 📌 Step 3: Login to Heroku
+```bash
 heroku login -i
 ```
-- Put `Heroku Email` and `Heroku API Key` (Get from [Here](https://dashboard.heroku.com/account))
+Enter your Heroku Email and Heroku API Key (found in Heroku account settings) when prompted.
 
-**Step 4:** Create Heroku App
-
-```shell
-heroku create --region us --stack container APP_NAME
+### 📌 Step 4: Create Heroku App
+```bash
+heroku create --region us --stack container YOUR_APP_NAME
 ```
-*(Copy the `BASE_URL` generated after App creation for `config.env`)*
+*Take note of the URL provided here, you will need it for the `BASE_URL` variable.*
 
-**Step 5:** Set up configuration files
-
-**To Edit Inside CLI (nano Editor):** 
-
-```shell
+### 📌 Step 5: Setup Configuration
+```bash
 nano config.env
 ```
-
-- **Sample config.env** _(Copy these and Paste in Editor and Fill Up)_
-  ```env
-  BOT_TOKEN = "YOUR_BOT_TOKEN"
-  TELEGRAM_API = "YOUR_API_ID"
-  TELEGRAM_HASH = "YOUR_API_HASH"
-  OWNER_ID = "YOUR_ID"
-  DATABASE_URL = "MONGODB_URL"
-  BASE_URL = "APP_URL"
-  SET_COMMANDS = "True"
-  UPSTREAM_REPO = "[https://github.com/Sourovislam637/Project-X](https://github.com/Sourovislam637/Project-X)"
-  UPSTREAM_BRANCH = "main"
-  ```
-- Exit from Editor via `CTRL + X`, followed via `y` and `Enter`.
-
-**Step 6:** Set Local git remote for Heroku
-
-```shell
-git add . -f
-git commit -m "Heroku Setup"
-heroku git:remote -a APP_NAME
+Ensure you have the minimum required variables set:
+```env
+BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
+TELEGRAM_API = "YOUR_API_ID_HERE"
+TELEGRAM_HASH = "YOUR_API_HASH_HERE"
+OWNER_ID = "YOUR_TELEGRAM_ID"
+DATABASE_URL = "YOUR_MONGODB_URI"
+BASE_URL = "[https://your-app-name.herokuapp.com/](https://your-app-name.herokuapp.com/)"
+SET_COMMANDS = "True"
+UPSTREAM_REPO = "[https://github.com/Sourovislam637/Project-X](https://github.com/Sourovislam637/Project-X)"
+UPSTREAM_BRANCH = "main"
 ```
 
-**Step 7:** Push to Heroku
-
-```shell
+### 📌 Step 6: Deploy to Heroku
+```bash
+git add . -f
+git commit -m "Initial Heroku Deployment"
+heroku git:remote -a YOUR_APP_NAME
 git push heroku main -f
 ```
 
-**Heroku Logs:** Use this command for Live Stream Logs:
-
-```shell
-heroku logs -a APP_NAME -t
+### 📌 Step 7: Check Logs
+To ensure the bot is running properly:
+```bash
+heroku logs -a YOUR_APP_NAME --tail
 ```
+
 </details>
 
 ---
 
-## 🛠️ Variables Descriptions
+## ⚙️ Environment Variables Dictionary
+
+Understanding the configuration file is crucial for bot stability.
 
 <details>
-  <summary><b>⚙️ View All Variables (Click to Expand)</b></summary>
+<summary><b>📝 Expand for Full Variable Descriptions</b></summary>
 
-- `BOT_TOKEN`: Telegram Bot Token that you got from [BotFather](https://t.me/BotFather). `Str`
-- `OWNER_ID`: Telegram User ID (not username) of the Owner of the bot. `Int`
-- `TELEGRAM_API`: This is to authenticate your Telegram account for downloading Telegram files. You can get this from <https://my.telegram.org>. `Int`
-- `TELEGRAM_HASH`: This is to authenticate your Telegram account for downloading Telegram files. You can get this from <https://my.telegram.org>. `Str`
-- `BASE_URL`: Valid BASE URL where the bot is deployed to use torrent web files selection.
-  - ***Heroku Deployment***: `https://app-name-random_code.herokuapp.com/` `Str`
-  - ***VPS Deployment***: `http://myip` or `http://myip:port`. `Str`
-- `DATABASE_URL`: Database URL of MongoDb to store all your files and Vars. `Str`
-- `UPSTREAM_REPO`: GitHub repository URL. `https://github.com/Sourovislam637/Project-X` `Str`
-- `UPSTREAM_BRANCH`: Upstream branch for update. Default is `main` or your designated branch. `Str`
+### Mandatory Variables
+- `BOT_TOKEN`: Your Telegram Bot Token. Obtain from [@BotFather](https://t.me/BotFather).
+- `OWNER_ID`: Your personal Telegram User ID (integer). 
+- `TELEGRAM_API`: Your Telegram API ID from [my.telegram.org](https://my.telegram.org).
+- `TELEGRAM_HASH`: Your Telegram API Hash from [my.telegram.org](https://my.telegram.org).
+
+### Connection Variables
+- `BASE_URL`: 
+  - **VPS:** `http://YOUR_IP` (or `http://YOUR_IP:PORT` if not using 80).
+  - **Heroku:** `https://appname.herokuapp.com/`.
+- `DATABASE_URL`: MongoDB URI connection string. Extremely recommended for storing user sessions, settings, and stats.
+
+### Upstream Variables
+- `UPSTREAM_REPO`: `https://github.com/Sourovislam637/Project-X` (This keeps your bot updated).
+- `UPSTREAM_BRANCH`: Leave as `main`.
+
+### Optional (But Recommended) Features
+- `AUTHORIZED_CHATS`: List of chat IDs (space separated) allowed to use the bot.
+- `SUDO_USERS`: List of user IDs that act as admins.
+- `IS_PREMIUM_USER`: If the bot session uses a premium account for 4GB upload limits.
+- `RSS_DELAY`: Interval for RSS feed checks.
+
+*(Refer to the repository's `config_sample.env` for all advanced variables)*
 
 </details>
 
 ---
 
-## 🌟 Credits & Official Channels
+## 🤝 Community & Support
 
-<p align="center">
-  <a href="https://t.me/Sourov_Nobita">
-    <img alt="Owner Telegram" src="https://img.shields.io/badge/Owner-Telegram-0088CC?style=for-the-badge&logo=telegram&logoColor=white">
-  </a>
-  <a href="https://github.com/Sourov-Nobita">
-    <img alt="Owner GitHub" src="https://img.shields.io/badge/Owner-GitHub-181717?style=for-the-badge&logo=github&logoColor=white">
-  </a>
-</p>
+We believe in open-source collaboration! If you encounter issues, have feature requests, or just want to hang out with other users, connect with us through our official channels.
 
-<p align="center">
-  <a href="https://t.me/Rare_Bots_Hub">
-    <img alt="Update Channel" src="https://img.shields.io/badge/Powered%20By%20%2F%20Updates-Rare%20Bots%20Hub-28A745?style=for-the-badge&logo=telegram&logoColor=white">
-  </a>
-  <a href="https://t.me/Rare_Leech_Mirror_Hub">
-    <img alt="Leech Mirror Channel" src="https://img.shields.io/badge/Leech%20Mirror%20Hub-Rare%20Leech%20Mirror%20Hub-FFC107?style=for-the-badge&logo=telegram&logoColor=black">
-  </a>
-</p>
+<div align="center">
 
-<p align="center">
-  <a href="https://github.com/Sourovislam637/Project-X">
-    <img alt="Source Repo" src="https://img.shields.io/badge/Main%20Source%20Repo-Project--X-blue?style=for-the-badge&logo=github&logoColor=white">
-  </a>
-</p>
+| Official Platforms | Links |
+| :---: | :--- |
+| **🗣️ Updates Channel** | [Join @Rare_Bots_Hub](https://t.me/Rare_Bots_Hub) |
+| **📁 Mirror Channel** | [Join @Rare_Leech_Mirror_Hub](https://t.me/Rare_Leech_Mirror_Hub) |
+| **💻 Main Repository** | [Project-X on GitHub](https://github.com/Sourovislam637/Project-X) |
+
+</div>
+
+---
+
+## 📜 Legal & Disclaimer
+
+- **Project-X** is an open-source project provided "as is" without warranty of any kind.
+- The developers (Sourov Nobita & contributors) are **not responsible** for any misuse of this software. Users are strictly advised to adhere to their respective local laws regarding copyright and data distribution.
+- **Do not use this bot to pirate or distribute copyrighted material illegally.**
+
+---
+<div align="center">
+    <b>Made with ❤️ by <a href="https://github.com/Sourov-Nobita">Sourov Nobita</a></b><br>
+    <i>Thank you for choosing Project-X! Don't forget to ⭐ star this repository!</i>
+</div>
