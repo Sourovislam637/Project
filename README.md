@@ -5,7 +5,7 @@
 <p>
     <a href="https://github.com/Sourovislam637/Project-X">
         <kbd>
-            <img src="https://graph.org/file/e600a0155fc5bf2a1d4ac-f01e9c19eba9a02830.jpg" width="550" alt="Project-X Logo">
+            <img src="https://i.ibb.co/zTHm92cG/image.jpg" width="550" alt="Project-X Logo">
         </kbd>
     </a>
 </p>
