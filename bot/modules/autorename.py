@@ -16,13 +16,24 @@ def trun(text, limit=60):
     text = str(text)
     return text[:limit] + "..." if len(text) > limit else text
 
-def get_autorename(filename, user_id, size="", media_quality="", lang="", subs=""):
+def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="", caption="", skip=False):
     """
     Advanced Auto Rename Logic: Cleans the filename and applies user format.
     Available Tags: {title}, {season}, {episode}, {quality}, {codec}, {audio}, {sub}, {size}, {language}
+
+    - `caption`   : original Telegram caption of the file. Used as a fallback source to find
+                    Season/Episode when the filename itself doesn't contain them.
+    - `skip`      : if True, Auto Rename is bypassed completely and the original filename is
+                    returned as-is. Used when the user has explicitly renamed the file via a
+                    manual rename command/flag (e.g. "/l -n filename.mkv") so that command
+                    should win over Auto Rename.
     """
     user_dict = user_data.get(user_id, {})
-    
+
+    # ম্যানুয়াল Rename Command (-n / -name) ব্যবহার করা হলে Autorename কাজ করবে না
+    if skip:
+        return filename
+
     # যদি ইউজারের Auto Rename বন্ধ থাকে, তবে অরিজিনাল নাম রিটার্ন করবে
     if not user_dict.get('autorename', False):
         return filename
@@ -34,11 +45,22 @@ def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="
 
     name, ext = os.path.splitext(filename)
 
-    # তথ্য বের করা (শুধুমাত্র সংখ্যা বের করা হবে যাতে S{season}E{episode} কাস্টমাইজ করা যায়)
+    # ইউজার Format এর একদম শেষে নিজে Extension (.mkv, .mp4 ইত্যাদি) বসিয়েছেন কিনা চেক করা।
+    # দিলে সেটাই ব্যবহার হবে, না দিলে Old/Original Video এর Extension অনুযায়ী যোগ হবে।
+    has_custom_ext = bool(re.search(r'\.[A-Za-z0-9]{2,5}$', format_str.strip()))
+
+    # ফাইলের নামে না পেলে File Caption থেকে Season/Episode খোঁজার জন্য ব্যাকআপ টেক্সট
+    caption_name = os.path.splitext(caption.split('\n')[0])[0] if caption else ""
+
+    # তথ্য বের করা (শুধুমাত্র সংখ্যা বের করা হবে যাতে S{season}E{episode} কাস্টমাইজ করা যায়)
     season_match = re.search(r'(?:S|Season\s*)(\d{1,2})', name, re.IGNORECASE)
+    if not season_match and caption_name:
+        season_match = re.search(r'(?:S|Season\s*)(\d{1,2})', caption_name, re.IGNORECASE)
     season = season_match.group(1).zfill(2) if season_match else ""
 
     episode_match = re.search(r'(?:E|Ep|Episode\s*)(\d{1,3})', name, re.IGNORECASE)
+    if not episode_match and caption_name:
+        episode_match = re.search(r'(?:E|Ep|Episode\s*)(\d{1,3})', caption_name, re.IGNORECASE)
     episode = episode_match.group(1).zfill(2) if episode_match else ""
 
     quality_match = re.search(r'(480p|720p|1080p|1440p|2160p|4K)', name, re.IGNORECASE)
@@ -64,7 +86,7 @@ def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="
     final_title = custom_title if custom_title else clean_title
 
     try:
-        # ইউজারের ফরম্যাট অনুযায়ী নাম সাজানো
+        # ইউজারের ফরম্যাট অনুযায়ী নাম সাজানো
         new_name = format_str.format(
             title=final_title,
             season=season,
@@ -83,18 +105,22 @@ def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="
         elif not season and episode:
             new_name = new_name.replace('SE', 'E')
             
-        # তৈরি হওয়া এক্সট্রা স্পেস, ড্যাশ বা ডট ক্লিন করা (Safeguard)
+        # তৈরি হওয়া এক্সট্রা স্পেস, ড্যাশ বা ডট ক্লিন করা (Safeguard)
         new_name = re.sub(r'\s+', ' ', new_name)
         new_name = re.sub(r'-\s*-', '-', new_name)
         new_name = re.sub(r'\.\s*\.', '.', new_name)
         new_name = new_name.strip(' -.')
         
-        # যদি কোনো কারণে নতুন নাম খালি হয়ে যায়, তবে ব্যাকআপ হিসেবে টাইটেল দিবে
+        # যদি কোনো কারণে নতুন নাম খালি হয়ে যায়, তবে ব্যাকআপ হিসেবে টাইটেল দিবে
         if not new_name:
             new_name = final_title
-            
-        LOGGER.info(f"Auto Renamed: {filename} -> {new_name}{ext}")
-        return f"{new_name}{ext}"
+
+        # Extension Handling: Format এ ইউজার নিজে Extension দিলে সেটাই থাকবে,
+        # না দিলে Original/Old Video এর Extension যোগ হবে।
+        final_name = new_name if has_custom_ext else f"{new_name}{ext}"
+
+        LOGGER.info(f"Auto Renamed: {filename} -> {final_name}")
+        return final_name
     
     except KeyError as e:
         LOGGER.error(f"Auto Rename KeyError: Missing tag {e} in user format.")
@@ -130,8 +156,8 @@ async def autorename_cmd(client, message):
     text += f"➲ <b>Current Format :</b> <code>{escape(trun(format_str, 60))}</code>\n"
     text += f"➲ <b>Custom Title :</b> <code>{escape(trun(custom_title, 60))}</code>\n\n"
     text += f"➲ <b>Available Tags :</b> <code>{{title}}</code>, <code>{{season}}</code>, <code>{{episode}}</code>, <code>{{quality}}</code>, <code>{{codec}}</code>, <code>{{audio}}</code>, <code>{{sub}}</code>, <code>{{size}}</code>, <code>{{language}}</code>\n"
-    text += f"➲ <b>Format Example :</b> <code>{{title}} - S{{season}}E{{episode}} - {{quality}} [{{size}}]</code>\n\n"
-    text += f"➲ <b>Description :</b> <i>Set your Custom Format and Title for Auto Renaming files. Custom Title will override {{title}}.</i>"
+    text += f"➲ <b>Format Example :</b> <code>{{title}} S{{season}}E{{episode}} [{{quality}}] Hindi.mkv</code>\n\n"
+    text += f"➲ <b>Description :</b> <i>Set your Custom Format and Title for Auto Renaming files. Custom Title will override {{title}}. Add an extension (.mkv/.mp4) at the end of the format to force it, otherwise the original file's extension is kept. Season/Episode are auto-detected from the filename, and from the file caption if missing in the name. A manual rename command (e.g. \"-n filename.mkv\") always overrides Auto Rename.</i>"
 
     buttons.ibutton("Disable" if auto_status == 'Enabled' else "Enable", f"userset {user_id} toggle_autorename")
     buttons.ibutton("Set Format", f"userset {user_id} autorename_format edit")
