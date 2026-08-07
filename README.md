@@ -17,18 +17,6 @@
   <a href="https://github.com/Sourovislam637/Project-X/stargazers">
     <img alt="Stars" src="https://img.shields.io/github/stars/Sourovislam637/Project-X?style=for-the-badge&logo=github&color=FFD700">
   </a>
-  <a href="https://github.com/Sourov-Nobita">
-    <img alt="Creator" src="https://img.shields.io/badge/Creator-Sourov_Nobita-blue?style=for-the-badge&logo=github">
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://t.me/Rare_Bots_Hub">
-    <img alt="Update Channel" src="https://img.shields.io/badge/Updates%20Channel-0088CC?style=for-the-badge&logo=telegram&logoColor=white">
-  </a>
-  <a href="https://t.me/Rare_Leech_Mirror_Hub">
-    <img alt="Leech Mirror Channel" src="https://img.shields.io/badge/Leech%20Mirror%20Hub-0A3D62?style=for-the-badge&logo=telegram&logoColor=white">
-  </a>
 </p>
 
 #### ***⚡️ Download Anything. Upload Everywhere. 🔥***
@@ -270,13 +258,26 @@ heroku logs -a APP_NAME -t
 
 ## 🌟 Credits & Official Channels
 
-A massive thanks to everyone who helped shape this project. 
+<p align="center">
+  <a href="https://t.me/Sourov_Nobita">
+    <img alt="Owner Telegram" src="https://img.shields.io/badge/Owner-Telegram-0088CC?style=for-the-badge&logo=telegram&logoColor=white">
+  </a>
+  <a href="https://github.com/Sourov-Nobita">
+    <img alt="Owner GitHub" src="https://img.shields.io/badge/Owner-GitHub-181717?style=for-the-badge&logo=github&logoColor=white">
+  </a>
+</p>
 
-| Role | Details & Link |
-| :--- | :--- |
-| **👑 Creator & Owner** | [**Sourov Nobita**](https://t.me/Sourov_Nobita) ( [GitHub](https://github.com/Sourov-Nobita) ) |
-| **🚀 Powered By / Updates** | [**Rare Bots Hub**](https://t.me/Rare_Bots_Hub) |
-| **🗂️ Leech Mirror Channel** | [**Rare Leech Mirror Hub**](https://t.me/Rare_Leech_Mirror_Hub) |
-| **🌐 Main Source Repo** | [**Project-X Repository**](https://github.com/Sourovislam637/Project-X) |
+<p align="center">
+  <a href="https://t.me/Rare_Bots_Hub">
+    <img alt="Update Channel" src="https://img.shields.io/badge/Powered%20By%20%2F%20Updates-Rare%20Bots%20Hub-28A745?style=for-the-badge&logo=telegram&logoColor=white">
+  </a>
+  <a href="https://t.me/Rare_Leech_Mirror_Hub">
+    <img alt="Leech Mirror Channel" src="https://img.shields.io/badge/Leech%20Mirror%20Hub-Rare%20Leech%20Mirror%20Hub-FFC107?style=for-the-badge&logo=telegram&logoColor=black">
+  </a>
+</p>
 
-> *Don't forget to ⭐ star the repository if you found it useful!*
+<p align="center">
+  <a href="https://github.com/Sourovislam637/Project-X">
+    <img alt="Source Repo" src="https://img.shields.io/badge/Main%20Source%20Repo-Project--X-blue?style=for-the-badge&logo=github&logoColor=white">
+  </a>
+</p>
