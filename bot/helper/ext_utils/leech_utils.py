@@ -20,6 +20,58 @@ from bot.helper.ext_utils.fs_utils import ARCH_EXT, get_mime_type
 from bot.helper.ext_utils.telegraph_helper import telegraph
 
 
+async def remux_container(inp_path, out_path):
+    """
+    Auto Rename এর Format এ ইউজার শেষে নিজের Extension (যেমন .mkv) বসিয়ে দিলে
+    আগে শুধু ফাইলটার নাম পাল্টে ফেলা হতো (os.rename) - আসল Container/Bytes
+    অপরিবর্তিতই থাকতো। অর্থাৎ একটা প্রকৃত .mp4 ফাইলকে শুধু নাম বদলে .mkv
+    বানিয়ে দেওয়া হতো (বা উল্টোটা)। VLC/MX Player এর মতো Player গুলো আসল
+    Content দেখে চালায় তাই সমস্যা হয় না, কিন্তু Telegram নিজে ফাইলের
+    Structure (moov/EBML ইত্যাদি) পার্স করে Streaming/Preview বানায় - Extension
+    আর আসল Container না মিললে সেখানেই Audio বাদ পড়া, Download আটকে থাকা, বা
+    Telegram এ Play না হওয়ার মতো সমস্যা হয়।
+
+    তাই Extension সত্যিই পাল্টাতে হলে এখানে আসল Remux (Stream Copy, কোনো
+    Re-encode ছাড়াই - তাই Fast এবং Quality Loss হয় না) করে দেওয়া হয়, যাতে
+    Bytes ও Extension দুটোই মিলে যায়।
+    """
+    out_ext = os.path.splitext(out_path)[1].lower()
+    cmd = [bot_cache['pkgs'][2], '-hide_banner', '-loglevel', 'error',
+           '-i', inp_path, '-map', '0', '-c', 'copy']
+    if out_ext == '.mp4':
+        # MP4 Container অনেক Subtitle Codec (যেমন ASS/SRT থেকে সরাসরি) রাখতে
+        # পারে না, তাই Text Subtitle কে mov_text এ Convert করা হচ্ছে।
+        cmd += ['-c:s', 'mov_text']
+    cmd.append(out_path)
+
+    proc = await create_subprocess_exec(*cmd, stderr=PIPE)
+    code = await proc.wait()
+    if code == 0 and await aiopath.exists(out_path):
+        return True
+
+    err = (await proc.stderr.read()).decode().strip()
+    LOGGER.warning(f'Remux to {out_ext} failed once, retrying without incompatible streams. {inp_path} : {err}')
+    with suppress(Exception):
+        await aioremove(out_path)
+
+    if out_ext == '.mp4':
+        # Bitmap/PGS এর মতো Subtitle বা অন্য Incompatible Stream থাকলে সেগুলো
+        # বাদ দিয়ে শুধু Video + Audio নিয়ে আবার চেষ্টা করা হচ্ছে, যাতে অন্তত
+        # Video-Audio ঠিক থাকা একটা File পাওয়া যায়।
+        cmd2 = [bot_cache['pkgs'][2], '-hide_banner', '-loglevel', 'error',
+                '-i', inp_path, '-map', '0:v', '-map', '0:a?', '-c', 'copy', out_path]
+        proc2 = await create_subprocess_exec(*cmd2, stderr=PIPE)
+        code2 = await proc2.wait()
+        if code2 == 0 and await aiopath.exists(out_path):
+            return True
+        err2 = (await proc2.stderr.read()).decode().strip()
+        LOGGER.error(f'Remux fallback also failed, keeping original container. {inp_path} : {err2}')
+        with suppress(Exception):
+            await aioremove(out_path)
+
+    return False
+
+
 async def is_multi_streams(path):
     try:
         result = await cmd_exec(["ffprobe", "-hide_banner", "-loglevel", "error", "-print_format",
