@@ -58,6 +58,8 @@ class _BotCommands:
         self.PosterCommand = f'poster{CMD_SUFFIX}'
         self.GDCleanCommand = [f'gdclean{CMD_SUFFIX}', f'gc{CMD_SUFFIX}']
         self.AutoRenameCommand = f'autorename{CMD_SUFFIX}'     
+        self.ExtractCommand = [f'extract{CMD_SUFFIX}', f'ex{CMD_SUFFIX}']
+        self.MergeCommand = [f'merge{CMD_SUFFIX}', f'mrg{CMD_SUFFIX}']
         self.BroadcastCommand = [f'broadcast{CMD_SUFFIX}', f'bc{CMD_SUFFIX}']
 
 BotCommands = _BotCommands()
