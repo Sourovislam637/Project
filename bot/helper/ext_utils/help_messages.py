@@ -406,7 +406,9 @@ f'''⌬ <b><i>Miscellaneous Commands!</i></b>
 
 <b>Extras:</b>
 ┠ /{BotCommands.SpeedCommand[0]} or /{BotCommands.SpeedCommand[1]}: Check Speed in VPS/Server.
-┖ /{BotCommands.MediaInfoCommand[0]} or /{BotCommands.MediaInfoCommand[1]} [url/media]: Generate MediaInfo of Media or DL Urls
+┠ /{BotCommands.MediaInfoCommand[0]} or /{BotCommands.MediaInfoCommand[1]} [url/media]: Generate MediaInfo of Media or DL Urls
+┠ /{BotCommands.ExtractCommand[0]} or /{BotCommands.ExtractCommand[1]} [reply to media]: Extract an Audio or Subtitle track from a file
+┖ /{BotCommands.MergeCommand[0]} or /{BotCommands.MergeCommand[1]} [reply to video]: Add/Replace an Audio track in a video
 
 <b>Torrent/Drive Search:</b>
 ┠ /{BotCommands.ListCommand} [query]: Search in Google Drive(s).
