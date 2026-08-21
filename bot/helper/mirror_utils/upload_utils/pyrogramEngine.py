@@ -20,7 +20,7 @@ from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.message_utils import sendCustomMsg, editReplyMarkup, sendMultiMessage, chat_info, deleteMessage, get_tg_link_content
 from bot.helper.ext_utils.fs_utils import clean_unwanted, is_archive, get_base_name
 from bot.helper.ext_utils.bot_utils import get_readable_file_size, is_telegram_link, is_url, sync_to_async, download_image_url
-from bot.helper.ext_utils.leech_utils import get_audio_thumb, get_media_info, get_document_type, take_ss, get_ss, get_mediainfo_link, format_filename
+from bot.helper.ext_utils.leech_utils import get_audio_thumb, get_media_info, get_document_type, take_ss, get_ss, get_mediainfo_link, format_filename, remux_container
 
 LOGGER = getLogger(__name__)
 getLogger("pyrogram").setLevel(ERROR)
@@ -204,13 +204,38 @@ class TgUploader:
         except Exception as err:
             return await self.__listener.onUploadError(f'Error in Format Filename : {err}')
         if prefile_ != file_:
-            if self.__listener.seed and not self.__listener.newDir and not dirpath.endswith("/splited_files_mltb"):
+            old_ext = ospath.splitext(prefile_)[1].lower()
+            new_ext = ospath.splitext(file_)[1].lower()
+            # Auto Rename Format এ ইউজার যদি Original ফাইলের চেয়ে ভিন্ন
+            # Extension (.mkv/.mp4) দিয়ে দেন, তাহলে শুধু নাম পাল্টালে হবে না -
+            # আসল Container Remux করতে হবে, নাহলে Telegram এ Play/Download এ
+            # সমস্যা হয় (দেখুন remux_container এর Docstring)।
+            remux_needed = bool(old_ext) and bool(new_ext) and old_ext != new_ext \
+                and old_ext in ('.mkv', '.mp4') and new_ext in ('.mkv', '.mp4')
+
+            seed_copy = self.__listener.seed and not self.__listener.newDir and not dirpath.endswith("/splited_files_mltb")
+            if seed_copy:
                 dirpath = f'{dirpath}/copied_mltb'
                 await makedirs(dirpath, exist_ok=True)
-                new_path = ospath.join(dirpath, file_)
+            new_path = ospath.join(dirpath, file_)
+
+            remuxed = False
+            if remux_needed:
+                remuxed = await remux_container(self.__up_path, new_path)
+                if not remuxed:
+                    # Remux ব্যর্থ হলে ভুল/Mismatched Container নিয়ে আপলোড না
+                    # করে বরং আসল Extension-ই রেখে দেওয়া নিরাপদ।
+                    LOGGER.warning(f"Remux {old_ext}->{new_ext} failed, keeping original container: {prefile_}")
+                    file_ = f"{ospath.splitext(file_)[0]}{old_ext}"
+                    new_path = ospath.join(dirpath, file_)
+
+            if remuxed:
+                if not seed_copy:
+                    await aioremove(self.__up_path)
+                self.__up_path = new_path
+            elif seed_copy:
                 self.__up_path = await copy(self.__up_path, new_path)
             else:
-                new_path = ospath.join(dirpath, file_)
                 await aiorename(self.__up_path, new_path)
                 self.__up_path = new_path
         if len(file_) > 60:
