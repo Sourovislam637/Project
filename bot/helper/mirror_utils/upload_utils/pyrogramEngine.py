@@ -206,10 +206,10 @@ class TgUploader:
         if prefile_ != file_:
             old_ext = ospath.splitext(prefile_)[1].lower()
             new_ext = ospath.splitext(file_)[1].lower()
-            # Auto Rename Format এ ইউজার যদি Original ফাইলের চেয়ে ভিন্ন
-            # Extension (.mkv/.mp4) দিয়ে দেন, তাহলে শুধু নাম পাল্টালে হবে না -
-            # আসল Container Remux করতে হবে, নাহলে Telegram এ Play/Download এ
-            # সমস্যা হয় (দেখুন remux_container এর Docstring)।
+            # If the Auto Rename Format gives a different Extension (.mkv/.mp4)
+            # than the Original file's, just renaming isn't enough - the
+            # actual Container needs to be Remuxed, otherwise Telegram has
+            # trouble Playing/Downloading it (see remux_container's docstring).
             remux_needed = bool(old_ext) and bool(new_ext) and old_ext != new_ext \
                 and old_ext in ('.mkv', '.mp4') and new_ext in ('.mkv', '.mp4')
 
@@ -223,8 +223,8 @@ class TgUploader:
             if remux_needed:
                 remuxed = await remux_container(self.__up_path, new_path)
                 if not remuxed:
-                    # Remux ব্যর্থ হলে ভুল/Mismatched Container নিয়ে আপলোড না
-                    # করে বরং আসল Extension-ই রেখে দেওয়া নিরাপদ।
+                    # If Remux fails, it's safer to keep the Original Extension
+                    # rather than upload a Mismatched Container.
                     LOGGER.warning(f"Remux {old_ext}->{new_ext} failed, keeping original container: {prefile_}")
                     file_ = f"{ospath.splitext(file_)[0]}{old_ext}"
                     new_path = ospath.join(dirpath, file_)
