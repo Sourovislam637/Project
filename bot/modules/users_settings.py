@@ -24,6 +24,7 @@ from bot.helper.ext_utils.db_handler import DbManger
 from bot.helper.ext_utils.bot_utils import getdailytasks, update_user_ldata, get_readable_file_size, sync_to_async, new_thread, is_gdrive_link
 from bot.helper.mirror_utils.upload_utils.ddlserver.gofile import Gofile
 from bot.helper.themes import BotTheme
+from bot.modules.autorename import validate_autorename_format
 
 def trun(text, limit=60):
     text = str(text)
@@ -477,7 +478,26 @@ async def set_custom(client, message, pre_event, key, direct=False):
         return_key = 'universal'
     elif key in ['autorename_format', 'custom_title']:
         return_key = 'autorename'
-        
+        if key == 'autorename_format' and (invalid_tags := validate_autorename_format(value)):
+            # ভুল/Typo করা Tag (যেমন {qualilty}) নিয়ে Format সেভ হতে দেওয়া হবে না,
+            # কারণ এটা পরে Auto Rename কে চুপচাপ ব্যর্থ করে দেয় এবং ইউজার বুঝতেই
+            # পারেন না কেন তার Auto Rename কাজ করছে না।
+            bad = ", ".join(f"{{{t}}}" for t in sorted(invalid_tags))
+            handler_dict[user_id] = False
+            await deleteMessage(message)
+            err_msg = await sendMessage(
+                message,
+                f"<b>⚠️ Invalid Tag(s) In Format:</b> <code>{escape(bad)}</code>\n\n"
+                f"<b>Available Tags :</b> <code>{{title}}</code>, <code>{{season}}</code>, <code>{{episode}}</code>, "
+                f"<code>{{quality}}</code>, <code>{{codec}}</code>, <code>{{audio}}</code>, <code>{{sub}}</code>, "
+                f"<code>{{size}}</code>, <code>{{language}}</code>\n\n"
+                f"<i>Format was not saved. Please try again.</i>"
+            )
+            await sleep(6)
+            await deleteMessage(err_msg)
+            await update_user_settings(pre_event, key, return_key, msg=message, sdirect=direct)
+            return
+
     update_user_ldata(user_id, n_key, value)
     await deleteMessage(message)
     await update_user_settings(pre_event, key, return_key, msg=message, sdirect=direct)
