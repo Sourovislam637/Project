@@ -16,6 +16,21 @@ def trun(text, limit=60):
     text = str(text)
     return text[:limit] + "..." if len(text) > limit else text
 
+# Auto Rename ফরম্যাটে ব্যবহারযোগ্য একমাত্র বৈধ Tag গুলো
+VALID_AUTORENAME_TAGS = {'title', 'season', 'episode',
+                          'quality', 'codec', 'audio', 'sub', 'size', 'language'}
+
+def validate_autorename_format(format_str):
+    """
+    ইউজারের ফরম্যাটে থাকা {tag} গুলোর মধ্যে কোনটা ভুল/Unsupported (যেমন Typo:
+    {qualilty}) তা রিটার্ন করে। এই ধরনের ভুল Tag থাকলে get_autorename() একটা
+    KeyError রেইজ করে চুপচাপ Original Filename রিটার্ন করে দেয় (নিচে দেখুন),
+    যেটা ইউজারের কাছে মনে হয় "Auto Rename কাজ করছে না" - অথচ কারণ বোঝা যায় না।
+    তাই Format সেভ করার আগেই এটা Validate করে নেওয়া উচিত।
+    """
+    used_tags = set(re.findall(r'\{([a-zA-Z_]+)\}', format_str))
+    return used_tags - VALID_AUTORENAME_TAGS
+
 def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="", caption="", skip=False):
     """
     Advanced Auto Rename Logic: Cleans the filename and applies user format.
@@ -104,6 +119,12 @@ def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="
             new_name = new_name.replace('SE', '').replace('S E', '')
         elif not season and episode:
             new_name = new_name.replace('SE', 'E')
+        elif season and not episode:
+            # Episode না পেলে "S02E" এর মতো একটা ঝুলে থাকা 'E' রয়ে যেত
+            # (যেমন: "...S2..." থাকা ফাইলে Episode না থাকলে ফলাফল হতো
+            # "S02E.mp4")। এখানে শুধু Season এর ঠিক পরের ফাঁকা E-টাই সরানো
+            # হচ্ছে, টাইটেলের অন্য কোনো 'E' অক্ষর নয়।
+            new_name = re.sub(rf'S{re.escape(season)}E(?!\d)', f'S{season}', new_name)
             
         # তৈরি হওয়া এক্সট্রা স্পেস, ড্যাশ বা ডট ক্লিন করা (Safeguard)
         new_name = re.sub(r'\s+', ' ', new_name)
@@ -138,6 +159,17 @@ async def autorename_cmd(client, message):
 
     if len(message.command) > 1:
         new_format = message.text.split(maxsplit=1)[1]
+        if invalid_tags := validate_autorename_format(new_format):
+            bad = ", ".join(f"{{{t}}}" for t in sorted(invalid_tags))
+            await sendMessage(
+                message,
+                f"<b>⚠️ Invalid Tag(s) In Format:</b> <code>{escape(bad)}</code>\n\n"
+                f"<b>Available Tags :</b> <code>{{title}}</code>, <code>{{season}}</code>, <code>{{episode}}</code>, "
+                f"<code>{{quality}}</code>, <code>{{codec}}</code>, <code>{{audio}}</code>, <code>{{sub}}</code>, "
+                f"<code>{{size}}</code>, <code>{{language}}</code>\n\n"
+                f"<i>Format was not saved. Please fix the tag and try again.</i>"
+            )
+            return
         update_user_ldata(user_id, 'autorename_format', new_format)
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
