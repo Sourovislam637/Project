@@ -1,5 +1,6 @@
 from hashlib import md5
 from time import strftime, gmtime, time
+from datetime import datetime
 from re import IGNORECASE, sub as re_sub, search as re_search
 from shlex import split as ssplit
 from natsort import natsorted
@@ -13,7 +14,7 @@ from telegraph import upload_file
 from langcodes import Language
 
 from bot import bot_cache, LOGGER, MAX_SPLIT_SIZE, config_dict, user_data
-from bot.modules.autorename import get_autorename
+from bot.modules.autorename import get_autorename, extract_season_episode_quality, YEAR_RE
 from bot.modules.mediainfo import parseinfo
 from bot.helper.ext_utils.bot_utils import cmd_exec, sync_to_async, get_readable_file_size, get_readable_time
 from bot.helper.ext_utils.fs_utils import ARCH_EXT, get_mime_type
@@ -22,25 +23,26 @@ from bot.helper.ext_utils.telegraph_helper import telegraph
 
 async def remux_container(inp_path, out_path):
     """
-    Auto Rename এর Format এ ইউজার শেষে নিজের Extension (যেমন .mkv) বসিয়ে দিলে
-    আগে শুধু ফাইলটার নাম পাল্টে ফেলা হতো (os.rename) - আসল Container/Bytes
-    অপরিবর্তিতই থাকতো। অর্থাৎ একটা প্রকৃত .mp4 ফাইলকে শুধু নাম বদলে .mkv
-    বানিয়ে দেওয়া হতো (বা উল্টোটা)। VLC/MX Player এর মতো Player গুলো আসল
-    Content দেখে চালায় তাই সমস্যা হয় না, কিন্তু Telegram নিজে ফাইলের
-    Structure (moov/EBML ইত্যাদি) পার্স করে Streaming/Preview বানায় - Extension
-    আর আসল Container না মিললে সেখানেই Audio বাদ পড়া, Download আটকে থাকা, বা
-    Telegram এ Play না হওয়ার মতো সমস্যা হয়।
+    When a user's Auto Rename format forces a different extension at the end
+    (e.g. ".mkv"), simply renaming the file (os.rename) leaves the actual
+    Container/Bytes unchanged - a real .mp4 file just gets a .mkv name slapped
+    on it (or the reverse). Players like VLC/MX Player look at the actual
+    content and play it fine regardless, but Telegram itself parses the file's
+    own structure (moov/EBML atoms etc.) to build Streaming/Preview - when the
+    declared extension doesn't match the real container, that's exactly where
+    problems like missing Audio, downloads getting stuck, or the video not
+    playing in Telegram come from.
 
-    তাই Extension সত্যিই পাল্টাতে হলে এখানে আসল Remux (Stream Copy, কোনো
-    Re-encode ছাড়াই - তাই Fast এবং Quality Loss হয় না) করে দেওয়া হয়, যাতে
-    Bytes ও Extension দুটোই মিলে যায়।
+    So when the extension genuinely needs to change, this does a real Remux
+    here (Stream Copy, no Re-encode - so it's fast and there's no quality
+    loss), making sure the Bytes and the Extension actually match.
     """
     out_ext = os.path.splitext(out_path)[1].lower()
     cmd = [bot_cache['pkgs'][2], '-hide_banner', '-loglevel', 'error',
            '-i', inp_path, '-map', '0', '-c', 'copy']
     if out_ext == '.mp4':
-        # MP4 Container অনেক Subtitle Codec (যেমন ASS/SRT থেকে সরাসরি) রাখতে
-        # পারে না, তাই Text Subtitle কে mov_text এ Convert করা হচ্ছে।
+        # MP4 containers can't hold most Subtitle Codecs (e.g. straight from
+        # ASS/SRT), so Text Subtitles are converted to mov_text here.
         cmd += ['-c:s', 'mov_text']
     cmd.append(out_path)
 
@@ -55,9 +57,9 @@ async def remux_container(inp_path, out_path):
         await aioremove(out_path)
 
     if out_ext == '.mp4':
-        # Bitmap/PGS এর মতো Subtitle বা অন্য Incompatible Stream থাকলে সেগুলো
-        # বাদ দিয়ে শুধু Video + Audio নিয়ে আবার চেষ্টা করা হচ্ছে, যাতে অন্তত
-        # Video-Audio ঠিক থাকা একটা File পাওয়া যায়।
+        # Some Subtitle (e.g. bitmap/PGS) or other Incompatible Stream may be
+        # causing the failure - drop those and retry with just Video + Audio,
+        # so at least a File with correct Video-Audio is produced.
         cmd2 = [bot_cache['pkgs'][2], '-hide_banner', '-loglevel', 'error',
                 '-i', inp_path, '-map', '0:v', '-map', '0:a?', '-c', 'copy', out_path]
         proc2 = await create_subprocess_exec(*cmd2, stderr=PIPE)
@@ -103,18 +105,24 @@ async def get_media_info(path, metadata=False):
             LOGGER.warning(f'Media Info FF: {res}')
     except Exception as e:
         LOGGER.error(f'Media Info: {e}. Mostly File not found!')
-        return (0, "", "", "") if metadata else (0, None, None)
+        return (0, "", "", "", 0, 0, "", "") if metadata else (0, None, None)
     ffresult = eval(result[0])
     fields = ffresult.get('format')
     if fields is None:
         LOGGER.error(f"Media Info Sections: {result}")
-        return (0, "", "", "") if metadata else (0, None, None)
+        return (0, "", "", "", 0, 0, "", "") if metadata else (0, None, None)
     duration = round(float(fields.get('duration', 0)))
+    tags = fields.get('tags', {})
+    artist = tags.get('artist') or tags.get('ARTIST') or tags.get("Artist") or ""
+    title = tags.get('title') or tags.get('TITLE') or tags.get("Title") or ""
     if metadata:
         lang, qual, stitles = "", "", ""
+        width, height = 0, 0
         if (streams := ffresult.get('streams')) and streams[0].get('codec_type') == 'video':
-            qual = int(streams[0].get('height'))
-            qual = f"{480 if qual <= 480 else 540 if qual <= 540 else 720 if qual <= 720 else 1080 if qual <= 1080 else 2160 if qual <= 2160 else 4320 if qual <= 4320 else 8640}p"
+            width = int(streams[0].get('width') or 0)
+            height = int(streams[0].get('height') or 0)
+            qh = height
+            qual = f"{480 if qh <= 480 else 540 if qh <= 540 else 720 if qh <= 720 else 1080 if qh <= 1080 else 2160 if qh <= 2160 else 4320 if qh <= 4320 else 8640}p"
             for stream in streams:
                 if stream.get('codec_type') == 'audio' and (lc := stream.get('tags', {}).get('language')):
                     with suppress(Exception):
@@ -126,10 +134,7 @@ async def get_media_info(path, metadata=False):
                         st = Language.get(st).display_name()
                     if st not in stitles:
                         stitles += f"{st}, "
-        return duration, qual, lang[:-2], stitles[:-2]
-    tags = fields.get('tags', {})
-    artist = tags.get('artist') or tags.get('ARTIST') or tags.get("Artist")
-    title = tags.get('title') or tags.get('TITLE') or tags.get("Title")
+        return duration, qual, lang[:-2], stitles[:-2], width, height, artist, title
     return duration, artist, title
 
 
@@ -299,11 +304,11 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False, has_cust
     up_path = ospath.join(dirpath, orig_file) if dirpath else None
     
     # Extract meta info once to feed both autorename and caption dynamically
-    dur, qual, lang, subs = 0, "", "", ""
+    dur, qual, lang, subs, vwidth, vheight, m_artist, m_title = 0, "", "", "", 0, 0, "", ""
     fsize = ""
     if up_path and await aiopath.exists(up_path):
         fsize = get_readable_file_size(await aiopath.getsize(up_path))
-        dur, qual, lang, subs = await get_media_info(up_path, True)
+        dur, qual, lang, subs, vwidth, vheight, m_artist, m_title = await get_media_info(up_path, True)
 
     if not isMirror:
         file_ = get_autorename(file_, user_id, size=fsize, media_quality=qual, lang=lang, subs=subs, caption=caption, skip=has_custom_name)
@@ -373,16 +378,51 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False, has_cust
         lcaption = lcaption.replace('\|', '%%').replace('\{', '&%&').replace('\}', '$%$').replace('\s', ' ')
         slit = lcaption.split("|")
         slit[0] = re_sub(r'\{([^}]+)\}', lowerVars, slit[0])
-        
-        cap_mono = slit[0].format(
-            filename = nfile_,
-            size = fsize,
-            duration = get_readable_time(dur),
-            quality = qual,
-            languages = lang,
-            subtitles = subs,
-            md5_hash = get_md5_hash(up_path) if up_path and await aiopath.exists(up_path) else ""
-        )
+
+        season, episode, _ = extract_season_episode_quality(ospath.splitext(orig_file)[0], caption)
+        year_match = YEAR_RE.search(orig_file) or (YEAR_RE.search(caption) if caption else None)
+        year = year_match.group(1) if year_match else ""
+        resolution = f"{vwidth}x{vheight}" if vwidth and vheight else ""
+        file_ext = ospath.splitext(nfile_)[1].lstrip('.')
+        mime_type = await sync_to_async(get_mime_type, up_path) if up_path and await aiopath.exists(up_path) else ""
+        caption_text = caption or ""
+        # If the original Message's caption object still carries its rich-text
+        # accessor (pyrogram's Str type has a `.html` property), use that for
+        # {html_caption}; otherwise fall back to the plain text we do have.
+        html_caption_text = getattr(caption, 'html', caption_text) or ""
+
+        try:
+            cap_mono = slit[0].format(
+                filename = nfile_,
+                size = fsize,
+                filesize = fsize,
+                duration = get_readable_time(dur),
+                quality = qual,
+                languages = lang,
+                language = lang,
+                subtitles = subs,
+                md5_hash = get_md5_hash(up_path) if up_path and await aiopath.exists(up_path) else "",
+                height = vheight or "",
+                width = vwidth or "",
+                resolution = resolution,
+                ext = file_ext,
+                mime_type = mime_type,
+                title = m_title,
+                artist = m_artist,
+                caption = caption_text,
+                html_caption = html_caption_text,
+                year = year,
+                season = season,
+                episode = episode,
+                wish = get_wish()
+            )
+        except KeyError as e:
+            LOGGER.error(f"Leech Caption: Unknown tag {e} in caption format, falling back to filename only.")
+            cap_mono = nfile_
+        except Exception as e:
+            LOGGER.error(f"Leech Caption Error: {e}")
+            cap_mono = nfile_
+
         if len(slit) > 1:
             for rep in range(1, len(slit)):
                 args = slit[rep].split(":")
@@ -428,3 +468,14 @@ def get_md5_hash(up_path):
         for byte_block in iter(lambda: f.read(4096), b""):
             md5_hash.update(byte_block)
         return md5_hash.hexdigest()
+
+
+def get_wish():
+    hour = datetime.now().hour
+    if hour < 12:
+        return "Good Morning"
+    if hour < 17:
+        return "Good Afternoon"
+    if hour < 21:
+        return "Good Evening"
+    return "Good Night"
