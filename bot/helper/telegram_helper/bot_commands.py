@@ -60,6 +60,7 @@ class _BotCommands:
         self.AutoRenameCommand = f'autorename{CMD_SUFFIX}'     
         self.ExtractCommand = [f'extract{CMD_SUFFIX}', f'ex{CMD_SUFFIX}']
         self.MergeCommand = [f'merge{CMD_SUFFIX}', f'mrg{CMD_SUFFIX}']
+        self.SetThumbCommand = f't{CMD_SUFFIX}'
         self.BroadcastCommand = [f'broadcast{CMD_SUFFIX}', f'bc{CMD_SUFFIX}']
 
 BotCommands = _BotCommands()
