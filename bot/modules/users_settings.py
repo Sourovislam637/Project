@@ -957,7 +957,7 @@ async def set_thumb_cmd(client, message):
     reply = message.reply_to_message
     
     if not reply or not reply.photo:
-        return await sendMessage(message, "Reply to a photo with /t to set it as your custom thumbnail.")
+        return await sendMessage(message, f"Reply to a photo with /{BotCommands.SetThumbCommand} to set it as your custom thumbnail.")
     
     path = "Thumbnails/"
     if not await aiopath.isdir(path):
@@ -987,4 +987,4 @@ bot.add_handler(MessageHandler(send_users_settings, filters=command(
 bot.add_handler(MessageHandler(user_settings, filters=command(
     BotCommands.UserSetCommand) & CustomFilters.authorized_uset))
 bot.add_handler(CallbackQueryHandler(edit_user_settings, filters=regex("^userset")))
-bot.add_handler(MessageHandler(set_thumb_cmd, filters=command("t") & CustomFilters.authorized_uset))
+bot.add_handler(MessageHandler(set_thumb_cmd, filters=command(BotCommands.SetThumbCommand) & CustomFilters.authorized_uset))
