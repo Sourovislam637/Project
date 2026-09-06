@@ -497,6 +497,10 @@ async def load_config():
     if len(FILELION_API) == 0:
         FILELION_API = ''
 
+    TMDB_API_KEY = environ.get('TMDB_API_KEY', '')
+    if len(TMDB_API_KEY) == 0:
+        TMDB_API_KEY = ''
+
     DEF_IMDB_TEMP  = environ.get('IMDB_TEMPLATE', '')
     if len(DEF_IMDB_TEMP) == 0:
         DEF_IMDB_TEMP = '''<b>Title: </b> {title} [{year}]
@@ -608,6 +612,7 @@ async def load_config():
                         'REAL_DEBRID_API': REAL_DEBRID_API,
                         'DEBRID_LINK_API': DEBRID_LINK_API,
                         'FILELION_API': FILELION_API,
+                        'TMDB_API_KEY': TMDB_API_KEY,
                         'DELETE_LINKS': DELETE_LINKS,
                         'DEFAULT_UPLOAD': DEFAULT_UPLOAD,
                         'DOWNLOAD_DIR': DOWNLOAD_DIR,
