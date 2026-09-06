@@ -306,7 +306,7 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False, has_cust
         dur, qual, lang, subs = await get_media_info(up_path, True)
 
     if not isMirror:
-        file_ = get_autorename(file_, user_id, size=fsize, media_quality=qual, lang=lang, subs=subs, caption=caption, skip=has_custom_name)
+        file_ = await get_autorename(file_, user_id, size=fsize, media_quality=qual, lang=lang, subs=subs, caption=caption, skip=has_custom_name)
 
     user_dict = user_data.get(user_id, {})
     ftag, ctag = ('m', 'MIRROR') if isMirror else ('l', 'LEECH')
