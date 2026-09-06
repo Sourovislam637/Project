@@ -493,6 +493,7 @@ default_desp = {'AS_DOCUMENT': 'Default type of Telegram file upload. Default is
                 'TOKEN_TIMEOUT': 'Token timeout for each group member in sec. Int',
                 'DEBRID_LINK_API': 'Set debrid-link.com API for 172 Supported Hosters Leeching Support. Str',
                 'REAL_DEBRID_API': 'Set real-debrid.com API for Torrent Cache & Few Supported Hosters (VPN Maybe). Str',
+                'TMDB_API_KEY': 'TMDB API Key used by /poster and Auto Rename (Movie/TV/Drama title lookup when {title} is used without a Custom Title). Str',
                 'LEECH_SPLIT_SIZE': 'Size of split in bytes. Default is 2GB. Default is 4GB if your account is premium.',
                 'MEDIA_GROUP': 'View Uploaded splitted file parts in media group. Default is False.',
                 'MEGA_EMAIL': 'E-Mail used to sign-in on mega.nz for using premium account. Str',
