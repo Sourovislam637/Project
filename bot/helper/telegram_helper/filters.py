@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from asyncio import gather
 from pyrogram.filters import create
 from pyrogram.enums import ChatType
 
@@ -41,15 +42,19 @@ class CustomFilters:
         if uid == OWNER_ID or (uid in user_data and (user_data[uid].get('is_auth', False) or user_data[uid].get('is_sudo', False))) or (chat_id in user_data and user_data[chat_id].get('is_auth', False)):
             isExists = True
         elif message.chat.type == ChatType.PRIVATE:
-            for channel_id in user_data:
-                if not (user_data[channel_id].get('is_auth') and str(channel_id).startswith('-100')):
-                    continue
-                try:
-                    if await (await chat_info(str(channel_id))).get_member(uid):
-                        isExists = True
-                        break
-                except:
-                    continue
+            channel_ids = [channel_id for channel_id in user_data
+                           if user_data[channel_id].get('is_auth') and str(channel_id).startswith('-100')]
+            if channel_ids:
+                async def _is_member(channel_id):
+                    try:
+                        chat = await chat_info(str(channel_id))
+                        return bool(chat and await chat.get_member(uid))
+                    except Exception:
+                        return False
+                # Check all authorized channels in parallel instead of one-by-one,
+                # so this filter doesn't get slower as more channels are authorized.
+                results = await gather(*(_is_member(cid) for cid in channel_ids))
+                isExists = any(results)
         return isExists
         
     authorized_uset = create(authorized_usetting)
