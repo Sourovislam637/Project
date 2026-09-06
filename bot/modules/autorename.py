@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 import re
 import os
-from bot import user_data, LOGGER, bot, DATABASE_URL
+from requests import post as rpost
+from urllib.parse import quote_plus
+from bot import user_data, LOGGER, bot, DATABASE_URL, config_dict
 from pyrogram.handlers import MessageHandler
 from pyrogram.filters import command
 from bot.helper.telegram_helper.message_utils import sendMessage
-from bot.helper.ext_utils.bot_utils import update_user_ldata
+from bot.helper.ext_utils.bot_utils import update_user_ldata, sync_to_async
 from bot.helper.ext_utils.db_handler import DbManger
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.bot_commands import BotCommands
+from bot.modules.anilist import ANIME_GRAPHQL_QUERY
+from bot.modules.poster import fetch_json
 from html import escape
 
 def trun(text, limit=60):
@@ -31,7 +35,51 @@ def validate_autorename_format(format_str):
     used_tags = set(re.findall(r'\{([a-zA-Z_]+)\}', format_str))
     return used_tags - VALID_AUTORENAME_TAGS
 
-def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="", caption="", skip=False):
+async def resolve_auto_title(search_name):
+    """
+    {title} Tag ব্যবহার হয়েছে কিন্তু Custom Title সেট করা নেই - এমন ক্ষেত্রে
+    ফাইলের ক্লিন করা নাম (search_name) দিয়ে প্রথমে AniList এ Anime Search করা
+    হয়। মিল পেলে সেটার English/Romaji Title রিটার্ন হয়। Anime না হলে (মিল না
+    পেলে) TMDB তে Movie/TV/Drama Search করা হয় (TMDB_API_KEY লাগবে, /bsetting
+    থেকে সেট করা যায়)। কোনোটাতেই মিল না পেলে None রিটার্ন করে - তখন Caller
+    ফাইলের ক্লিন নামটাই Title হিসেবে ব্যবহার করবে।
+    """
+    if not search_name or not search_name.strip():
+        return None
+    search_name = search_name.strip()
+
+    # 1) AniList Anime Search (Blocking call, তাই sync_to_async দিয়ে Thread এ চালানো
+    #    হচ্ছে যাতে Event Loop ব্লক না হয়ে যায়)
+    try:
+        anires = await sync_to_async(
+            rpost, 'https://graphql.anilist.co',
+            json={'query': ANIME_GRAPHQL_QUERY, 'variables': {'search': search_name}},
+            timeout=10
+        )
+        media = anires.json().get('data', {}).get('Media')
+        if media:
+            title = media.get('title', {}) or {}
+            if (t := title.get('english') or title.get('romaji')):
+                return t
+    except Exception as e:
+        LOGGER.error(f"Auto Rename: AniList title lookup failed for '{search_name}': {e}")
+
+    # 2) TMDB Multi Search (Movie / TV / Drama) - Anime না হলে এইখানে আসবে
+    if config_dict.get('TMDB_API_KEY'):
+        try:
+            safe_query = quote_plus(search_name)
+            url = f"https://api.themoviedb.org/3/search/multi?api_key={config_dict['TMDB_API_KEY']}&query={safe_query}"
+            result = await fetch_json(url)
+            if result and result.get('results'):
+                valid = [r for r in result['results'] if r.get('media_type') in ('movie', 'tv')]
+                if valid and (t := valid[0].get('title') or valid[0].get('name')):
+                    return t
+        except Exception as e:
+            LOGGER.error(f"Auto Rename: TMDB title lookup failed for '{search_name}': {e}")
+
+    return None
+
+async def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="", caption="", skip=False):
     """
     Advanced Auto Rename Logic: Cleans the filename and applies user format.
     Available Tags: {title}, {season}, {episode}, {quality}, {codec}, {audio}, {sub}, {size}, {language}
@@ -96,9 +144,17 @@ def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="
     clean_title = re.sub(noise_pattern, '', clean_title, flags=re.IGNORECASE)
     clean_title = re.sub(r'(\s|-|\.)+', ' ', clean_title).strip() 
 
-    # ইউজারের Custom Title চেক করা
+    # ইউজারের Custom Title চেক করা। Custom Title না থাকলে এবং Format এ {title}
+    # ব্যবহার হলে, ফাইলের নাম দিয়ে AniList/TMDB Search করে Title বের করার
+    # চেষ্টা করা হয় (resolve_auto_title)। কোনোভাবেই না পেলে ক্লিন করা ফাইলের
+    # নামটাই Fallback হিসেবে ব্যবহার হবে।
     custom_title = user_dict.get('custom_title', '')
-    final_title = custom_title if custom_title else clean_title
+    if custom_title:
+        final_title = custom_title
+    elif '{title}' in format_str:
+        final_title = await resolve_auto_title(clean_title) or clean_title
+    else:
+        final_title = clean_title
 
     try:
         # ইউজারের ফরম্যাট অনুযায়ী নাম সাজানো
@@ -191,16 +247,11 @@ async def autorename_cmd(client, message):
     text += f"➲ <b>Format Example :</b> <code>{{title}} S{{season}}E{{episode}} [{{quality}}] Hindi.mkv</code>\n\n"
     text += f"➲ <b>Description :</b> <i>Set your Custom Format and Title for Auto Renaming files. Custom Title will override {{title}}. Add an extension (.mkv/.mp4) at the end of the format to force it, otherwise the original file's extension is kept. Season/Episode are auto-detected from the filename, and from the file caption if missing in the name. A manual rename command (e.g. \"-n filename.mkv\") always overrides Auto Rename.</i>"
 
-    buttons.ibutton("Disable" if auto_status == 'Enabled' else "Enable", f"userset {user_id} toggle_autorename")
-    buttons.ibutton("Set Format", f"userset {user_id} autorename_format edit")
-    buttons.ibutton("Set Custom Title", f"userset {user_id} custom_title edit")
-    
-    if format_str != 'Not Exists':
-        buttons.ibutton("↻ Delete Format", f"userset {user_id} dautorename_format")
-    if custom_title != 'Not Exists':
-        buttons.ibutton("↻ Delete Title", f"userset {user_id} dcustom_title")
-    
-    # Back button removed as requested, only Close remains.
+    buttons.ibutton("Disable" if auto_status == 'Enabled' else "Enable", f"userset {user_id} toggle_autorename", "header")
+    buttons.ibutton("Title", f"userset {user_id} custom_title")
+    buttons.ibutton("Format", f"userset {user_id} autorename_format")
+
+    buttons.ibutton("Back", f"userset {user_id} back leech", "footer")
     buttons.ibutton("Close", f"userset {user_id} close", "footer")
     
     button = buttons.build_menu(2)
