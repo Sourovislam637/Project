@@ -6,12 +6,12 @@ from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from pyrogram.filters import command, regex
 
 # Leech Bot imports
-from bot import bot, LOGGER
+from bot import bot, LOGGER, config_dict
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.bot_commands import BotCommands
 
-# TMDB API Key
-TMDB_API_KEY = "4b061466449ce519d5884948a9671e63"
+# TMDB API Key is configured via /bsetting -> Config Variables -> TMDB_API_KEY
+# (or the TMDB_API_KEY env var / config.env), not hardcoded here anymore.
 
 # Helper function for async API calls
 async def fetch_json(url):
@@ -26,6 +26,8 @@ async def fetch_json(url):
 
 
 async def get_poster_menu(client, message):
+    if not config_dict.get('TMDB_API_KEY'):
+        return await message.reply_text("<b>⚠️ TMDB_API_KEY ᴄᴏɴꜰɪɢᴜʀᴇᴅ ɴᴀɪ! Set it via /bsetting -> Config Variables -> TMDB_API_KEY</b>")
     if len(message.command) == 1:
         return await message.reply_text("<b>⚠️ ᴘʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴍᴏᴠɪᴇ ᴏʀ ᴛᴠ ꜱʜᴏᴡ ɴᴀᴍᴇ.\n\n📌 ᴇxᴀᴍᴘʟᴇ:</b> <code>/poster naruto</code>")
 
@@ -36,7 +38,7 @@ async def get_poster_menu(client, message):
     msg = await message.reply_text(f"<b>🔎 ꜱᴇᴀʀᴄʜɪɴɢ ᴛᴍᴅʙ ꜰᴏʀ</b> <code>{query}</code> <b>...</b>")
 
     try:
-        search_url = f"https://api.themoviedb.org/3/search/multi?api_key={TMDB_API_KEY}&query={safe_query}"
+        search_url = f"https://api.themoviedb.org/3/search/multi?api_key={config_dict['TMDB_API_KEY']}&query={safe_query}"
         search_results = await fetch_json(search_url)
 
         if not search_results or not search_results.get("results"):
@@ -81,7 +83,7 @@ async def handle_back_to_search(client, callback_query):
 
     try:
         safe_query = urllib.parse.quote_plus(short_query)
-        search_url = f"https://api.themoviedb.org/3/search/multi?api_key={TMDB_API_KEY}&query={safe_query}"
+        search_url = f"https://api.themoviedb.org/3/search/multi?api_key={config_dict['TMDB_API_KEY']}&query={safe_query}"
         search_results = await fetch_json(search_url)
 
         if not search_results or not search_results.get("results"):
@@ -139,8 +141,8 @@ async def show_poster_categories(client, callback_query):
     await callback_query.answer("ɢᴇɴᴇʀᴀᴛɪɴɢ ᴍᴇɴᴜ...")
 
     try:
-        details_url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}?api_key={TMDB_API_KEY}"
-        img_url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}/images?api_key={TMDB_API_KEY}"
+        details_url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}?api_key={config_dict['TMDB_API_KEY']}"
+        img_url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}/images?api_key={config_dict['TMDB_API_KEY']}"
         
         details = await fetch_json(details_url)
         images = await fetch_json(img_url)
@@ -228,7 +230,7 @@ async def handle_poster_viewer(client, callback_query):
     await callback_query.answer("ꜰᴇᴛᴄʜɪɴɢ ɪᴍᴀɢᴇꜱ...")
 
     try:
-        url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}/images?api_key={TMDB_API_KEY}"
+        url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}/images?api_key={config_dict['TMDB_API_KEY']}"
         response = await fetch_json(url)
         
         if not response:
@@ -261,7 +263,7 @@ async def handle_poster_viewer(client, callback_query):
         img_url = f"https://image.tmdb.org/t/p/w1280{img['file_path']}"
         original_url = f"https://image.tmdb.org/t/p/original{img['file_path']}"
         
-        details_url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}?api_key={TMDB_API_KEY}"
+        details_url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}?api_key={config_dict['TMDB_API_KEY']}"
         details = await fetch_json(details_url)
         title = details.get("name") or details.get("title", "ᴜɴᴋɴᴏᴡɴ")
 
