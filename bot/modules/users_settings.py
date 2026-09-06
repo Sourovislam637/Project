@@ -248,15 +248,10 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         text += f"➲ <b>Format Example :</b> <code>{{title}} - S{{season}}E{{episode}} - {{quality}} [{{size}}]</code>\n\n"
         text += f"➲ <b>Description :</b> <i>Set your Custom Format and Title for Auto Renaming files. Custom Title will override {{title}}.</i>"
 
-        buttons.ibutton("Disable" if auto_status == 'Enabled' else "Enable", f"userset {user_id} toggle_autorename")
-        buttons.ibutton("Set Format", f"userset {user_id} autorename_format edit")
-        buttons.ibutton("Set Custom Title", f"userset {user_id} custom_title edit")
-        
-        if format_str != 'Not Exists':
-            buttons.ibutton("↻ Delete Format", f"userset {user_id} dautorename_format")
-        if custom_title != 'Not Exists':
-            buttons.ibutton("↻ Delete Title", f"userset {user_id} dcustom_title")
-        
+        buttons.ibutton("Disable" if auto_status == 'Enabled' else "Enable", f"userset {user_id} toggle_autorename", "header")
+        buttons.ibutton("Title", f"userset {user_id} custom_title")
+        buttons.ibutton("Format", f"userset {user_id} autorename_format")
+
         buttons.ibutton("Back", f"userset {user_id} back leech", "footer")
         buttons.ibutton("Close", f"userset {user_id} close", "footer")
         button = buttons.build_menu(2)
