@@ -868,5 +868,23 @@ log_info("Creating client from BOT_TOKEN")
 bot = wztgClient('bot', TELEGRAM_API, TELEGRAM_HASH, bot_token=BOT_TOKEN, workers=1000,
                parse_mode=enums.ParseMode.HTML).start()
 bot_loop = bot.loop
+
+def _global_asyncio_error_handler(loop, context):
+    """
+    Safety-net for exceptions raised in fire-and-forget background tasks
+    (e.g. anything scheduled with bot_loop.create_task / the @new_task
+    decorator) that nobody ever awaits/checks the result of. Without this,
+    such errors are only visible as a generic, hard-to-trace
+    "Task exception was never retrieved" line. This logs them properly
+    instead, and never lets a single bad task crash the whole event loop.
+    """
+    exc = context.get('exception')
+    msg = context.get('message', 'Unhandled exception in background task')
+    if exc:
+        LOGGER.error(f"{msg}: {exc}", exc_info=exc)
+    else:
+        LOGGER.error(msg)
+
+bot_loop.set_exception_handler(_global_asyncio_error_handler)
 bot_name = bot.me.username
 scheduler = AsyncIOScheduler(timezone=str(get_localzone()), event_loop=bot_loop)
