@@ -59,11 +59,11 @@ if UPGRADE_PACKAGES.lower() == 'true':
 
 UPSTREAM_REPO = environ.get('UPSTREAM_REPO', '')
 if len(UPSTREAM_REPO) == 0:
-    UPSTREAM_REPO = "https://github.com/Tamilupdates/KPSML-X"
+    UPSTREAM_REPO = "https://github.com/Sourovislam637/Project"
 
 UPSTREAM_BRANCH = environ.get('UPSTREAM_BRANCH', '')
 if len(UPSTREAM_BRANCH) == 0:
-    UPSTREAM_BRANCH = 'kpsmlx'
+    UPSTREAM_BRANCH = 'Project'
 
 if UPSTREAM_REPO is not None:
     if ospath.exists('.git'):
@@ -79,7 +79,10 @@ if UPSTREAM_REPO is not None:
                      && git reset --hard origin/{UPSTREAM_BRANCH} -q"], shell=True)
 
     repo = UPSTREAM_REPO.split('/')
-    UPSTREAM_REPO = f"https://github.com/{repo[-2]}/{repo[-1]}"
+    if len(repo) >= 2:
+        UPSTREAM_REPO = f"https://github.com/{repo[-2]}/{repo[-1]}"
+    else:
+        log_error(f"UPSTREAM_REPO looks malformed: {UPSTREAM_REPO!r} - leaving it as-is.")
     if update.returncode == 0:
         log_info('Successfully updated with latest commits !!')
     else:
