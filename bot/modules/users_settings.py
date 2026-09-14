@@ -474,9 +474,9 @@ async def set_custom(client, message, pre_event, key, direct=False):
     elif key in ['autorename_format', 'custom_title']:
         return_key = 'autorename'
         if key == 'autorename_format' and (invalid_tags := validate_autorename_format(value)):
-            # ভুল/Typo করা Tag (যেমন {qualilty}) নিয়ে Format সেভ হতে দেওয়া হবে না,
-            # কারণ এটা পরে Auto Rename কে চুপচাপ ব্যর্থ করে দেয় এবং ইউজার বুঝতেই
-            # পারেন না কেন তার Auto Rename কাজ করছে না।
+            # A format with an invalid/typo'd tag (e.g. {qualilty}) is not
+            # allowed to save, because it later makes Auto Rename silently
+            # fail and the user has no idea why it's not working.
             bad = ", ".join(f"{{{t}}}" for t in sorted(invalid_tags))
             handler_dict[user_id] = False
             await deleteMessage(message)
@@ -593,6 +593,8 @@ async def event_handler(client, query, pfunc, rfunc, photo=False, document=False
         else:
             mtype = event.text
         user = event.from_user or event.sender_chat
+        if user is None:
+            return False
         return bool(user.id == user_id and event.chat.id == query.message.chat.id and mtype)
         
     handler = client.add_handler(MessageHandler(
