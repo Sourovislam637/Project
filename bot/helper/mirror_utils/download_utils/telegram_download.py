@@ -106,6 +106,12 @@ class TelegramDownloadHelper:
             self.__decrypter = decrypter
 
         media = getattr(message, message.media.value) if message.media else None
+        # A link preview (e.g. replying to a message containing just a URL)
+        # has message.media set, but the resulting object (WebPagePreview) is
+        # not an actual downloadable file - it has no file_unique_id/file_size.
+        # Treat it the same as "no media" instead of crashing.
+        if media is not None and not hasattr(media, 'file_unique_id'):
+            media = None
         
         if media is not None:
             async with global_lock:
