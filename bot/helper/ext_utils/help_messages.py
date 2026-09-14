@@ -347,7 +347,9 @@ help_string = [f'''⌬ <b><i>Basic Commands!</i></b>
 f'''⌬ <b><i>Users Commands!</i></b>
 
 <b>Bot Settings:</b>
-┖ /{BotCommands.UserSetCommand[0]} or /{BotCommands.UserSetCommand[1]} [query]: Open User Settings (PM also)
+┠ /{BotCommands.UserSetCommand[0]} or /{BotCommands.UserSetCommand[1]} [query]: Open User Settings (PM also)
+┠ /{BotCommands.AutoRenameCommand}: Set Auto Rename Format/Title for Leech Files.
+┖ /{BotCommands.SetThumbCommand}: Reply to a photo to set it as your Custom Thumbnail.
 
 <b>Authentication:</b>
 ┖ /login: Login to Bot to Access Bot without Temp Pass System (Private)
@@ -360,47 +362,48 @@ f'''⌬ <b><i>Users Commands!</i></b>
 <b>RSS Feed:</b>
 ┖ /{BotCommands.RssCommand}: Open RSS Menu (Sub/Unsub/Start/Pause)''',
 
-f'''⌬ <b><i>Owner or Sudos Commands!</i></b>
+f'''⌬ <b><i>ᴏᴡɴᴇʀ ᴏʀ ꜱᴜᴅᴏꜱ ᴄᴏᴍᴍᴀɴᴅꜱ!</i></b>
 
-<b>Bot Settings:</b>
-┠ /{BotCommands.BotSetCommand[0]} or /{BotCommands.BotSetCommand[1]} [query]: Open Bot Settings (Only Owner & Sudo).
-┖ /{BotCommands.UsersCommand}: Show User Stats Info (Only Owner & Sudo).
+<b>ʙᴏᴛ ꜱᴇᴛᴛɪɴɢꜱ:</b>
+┠ /{BotCommands.BotSetCommand[0]} ᴏʀ /{BotCommands.BotSetCommand[1]} [ǫᴜᴇʀʏ]: ᴏᴘᴇɴ ʙᴏᴛ ꜱᴇᴛᴛɪɴɢꜱ (ᴏɴʟʏ ᴏᴡɴᴇʀ & ꜱᴜᴅᴏ).
+┖ /{BotCommands.UsersCommand}: ꜱʜᴏᴡ ᴜꜱᴇʀ ꜱᴛᴀᴛꜱ ɪɴꜰᴏ (ᴏɴʟʏ ᴏᴡɴᴇʀ & ꜱᴜᴅᴏ).
 
-<b>Authentication:</b>
-┠ /{BotCommands.AuthorizeCommand[0]} or /{BotCommands.AuthorizeCommand[1]}: Authorize a chat or a user to use the bot (Only Owner & Sudo).
-┠ /{BotCommands.UnAuthorizeCommand[0]} or /{BotCommands.UnAuthorizeCommand[1]}: Unauthorize a chat or a user to use the bot (Only Owner & Sudo).
-┠ /{BotCommands.AddSudoCommand}: Add sudo user (Only Owner).
-┠ /{BotCommands.RmSudoCommand}: Remove sudo users (Only Owner).
-┠ /{BotCommands.AddBlackListCommand[0]} or /{BotCommands.AddBlackListCommand[1]}: Add User in BlackListed, so that user can't use the Bot anymore.
-┖ /{BotCommands.RmBlackListCommand[0]} or /{BotCommands.RmBlackListCommand[1]}: Remove a BlackListed User, so that user can again use the Bot.
+<b>ᴀᴜᴛʜᴇɴᴛɪᴄᴀᴛɪᴏɴ:</b>
+┠ /{BotCommands.AuthorizeCommand[0]} ᴏʀ /{BotCommands.AuthorizeCommand[1]}: ᴀᴜᴛʜᴏʀɪᴢᴇ ᴀ ᴄʜᴀᴛ ᴏʀ ᴀ ᴜꜱᴇʀ ᴛᴏ ᴜꜱᴇ ᴛʜᴇ ʙᴏᴛ (ᴏɴʟʏ ᴏᴡɴᴇʀ & ꜱᴜᴅᴏ).
+┠ /{BotCommands.UnAuthorizeCommand[0]} ᴏʀ /{BotCommands.UnAuthorizeCommand[1]}: ᴜɴᴀᴜᴛʜᴏʀɪᴢᴇ ᴀ ᴄʜᴀᴛ ᴏʀ ᴀ ᴜꜱᴇʀ ᴛᴏ ᴜꜱᴇ ᴛʜᴇ ʙᴏᴛ (ᴏɴʟʏ ᴏᴡɴᴇʀ & ꜱᴜᴅᴏ).
+┠ /{BotCommands.AddSudoCommand}: ᴀᴅᴅ ꜱᴜᴅᴏ ᴜꜱᴇʀ (ᴏɴʟʏ ᴏᴡɴᴇʀ).
+┠ /{BotCommands.RmSudoCommand}: ʀᴇᴍᴏᴠᴇ ꜱᴜᴅᴏ ᴜꜱᴇʀꜱ (ᴏɴʟʏ ᴏᴡɴᴇʀ).
+┠ /{BotCommands.ViewSudoCommand}: ᴠɪᴇᴡ ᴀʟʟ ꜱᴜᴅᴏ ᴜꜱᴇʀꜱ ᴡɪᴛʜ ɴᴀᴍᴇ, ᴍᴇɴᴛɪᴏɴ & ɪᴅ (ᴏɴʟʏ ᴏᴡɴᴇʀ & ꜱᴜᴅᴏ).
+┠ /{BotCommands.AddBlackListCommand[0]} ᴏʀ /{BotCommands.AddBlackListCommand[1]}: ᴀᴅᴅ ᴜꜱᴇʀ ɪɴ ʙʟᴀᴄᴋʟɪꜱᴛᴇᴅ, ꜱᴏ ᴛʜᴀᴛ ᴜꜱᴇʀ ᴄᴀɴ'ᴛ ᴜꜱᴇ ᴛʜᴇ ʙᴏᴛ ᴀɴʏᴍᴏʀᴇ.
+┖ /{BotCommands.RmBlackListCommand[0]} ᴏʀ /{BotCommands.RmBlackListCommand[1]}: ʀᴇᴍᴏᴠᴇ ᴀ ʙʟᴀᴄᴋʟɪꜱᴛᴇᴅ ᴜꜱᴇʀ, ꜱᴏ ᴛʜᴀᴛ ᴜꜱᴇʀ ᴄᴀɴ ᴀɢᴀɪɴ ᴜꜱᴇ ᴛʜᴇ ʙᴏᴛ.
 
-<b>Bot Stats:</b>
-┖ /{BotCommands.BroadcastCommand[0]} or /{BotCommands.BroadcastCommand[1]} [reply_msg]: Broadcast to PM users who have started the bot anytime.
+<b>ʙᴏᴛ ꜱᴛᴀᴛꜱ:</b>
+┖ /{BotCommands.BroadcastCommand[0]} ᴏʀ /{BotCommands.BroadcastCommand[1]} [ʀᴇᴘʟʏ_ᴍꜱɢ]: ʙʀᴏᴀᴅᴄᴀꜱᴛ ᴛᴏ ᴘᴍ ᴜꜱᴇʀꜱ ᴡʜᴏ ʜᴀᴠᴇ ꜱᴛᴀʀᴛᴇᴅ ᴛʜᴇ ʙᴏᴛ ᴀɴʏᴛɪᴍᴇ.
 
-<b>G-Drive commands:</b>
-┖ /{BotCommands.GDCleanCommand[0]} or /{BotCommands.GDCleanCommand[1]} [drive_id]: Delete all files from specific folder in Google Drive.
+<b>ɢ-ᴅʀɪᴠᴇ ᴄᴏᴍᴍᴀɴᴅꜱ:</b>
+┖ /{BotCommands.GDCleanCommand[0]} ᴏʀ /{BotCommands.GDCleanCommand[1]} [ᴅʀɪᴠᴇ_ɪᴅ]: ᴅᴇʟᴇᴛᴇ ᴀʟʟ ꜰɪʟᴇꜱ ꜰʀᴏᴍ ꜱᴘᴇᴄɪꜰɪᴄ ꜰᴏʟᴅᴇʀ ɪɴ ɢᴏᴏɢʟᴇ ᴅʀɪᴠᴇ.
 
-<b>Cancel Tasks:</b>
-┖ /{BotCommands.CancelAllCommand[0]}: Cancel all Tasks & /{BotCommands.CancelAllCommand[1]} for Multiple Bots.
+<b>ᴄᴀɴᴄᴇʟ ᴛᴀꜱᴋꜱ:</b>
+┖ /{BotCommands.CancelAllCommand[0]}: ᴄᴀɴᴄᴇʟ ᴀʟʟ ᴛᴀꜱᴋꜱ & /{BotCommands.CancelAllCommand[1]} ꜰᴏʀ ᴍᴜʟᴛɪᴘʟᴇ ʙᴏᴛꜱ.
 
-<b>Maintainance:</b>
-┠ /{BotCommands.RestartCommand[0]} or /{BotCommands.RestartCommand[1]}: Restart and Update the Bot (Only Owner & Sudo).
-┠ /{BotCommands.RestartCommand[2]}: Restart and Update all Bots (Only Owner & Sudo).
-┖ /{BotCommands.LogCommand}: Get a log file of the bot. Handy for getting crash reports (Only Owner & Sudo).
+<b>ᴍᴀɪɴᴛᴀɪɴᴀɴᴄᴇ:</b>
+┠ /{BotCommands.RestartCommand[0]} ᴏʀ /{BotCommands.RestartCommand[1]}: ʀᴇꜱᴛᴀʀᴛ ᴀɴᴅ ᴜᴘᴅᴀᴛᴇ ᴛʜᴇ ʙᴏᴛ (ᴏɴʟʏ ᴏᴡɴᴇʀ & ꜱᴜᴅᴏ).
+┠ /{BotCommands.RestartCommand[2]}: ʀᴇꜱᴛᴀʀᴛ ᴀɴᴅ ᴜᴘᴅᴀᴛᴇ ᴀʟʟ ʙᴏᴛꜱ (ᴏɴʟʏ ᴏᴡɴᴇʀ & ꜱᴜᴅᴏ).
+┖ /{BotCommands.LogCommand}: ɢᴇᴛ ᴀ ʟᴏɢ ꜰɪʟᴇ ᴏꜰ ᴛʜᴇ ʙᴏᴛ. ʜᴀɴᴅʏ ꜰᴏʀ ɢᴇᴛᴛɪɴɢ ᴄʀᴀꜱʜ ʀᴇᴘᴏʀᴛꜱ (ᴏɴʟʏ ᴏᴡɴᴇʀ & ꜱᴜᴅᴏ).
 
-<b>Executors:</b>
-┠ /{BotCommands.ShellCommand}: Run shell commands (Only Owner).
-┠ /{BotCommands.EvalCommand}: Run Python Code Line | Lines (Only Owner).
-┠ /{BotCommands.ExecCommand}: Run Commands In Exec (Only Owner).
-┠ /{BotCommands.ClearLocalsCommand}: Clear {BotCommands.EvalCommand} or {BotCommands.ExecCommand} locals (Only Owner).
-┖ /exportsession: Generate User StringSession of Same Pyro Version (Only Owner).
+<b>ᴇxᴇᴄᴜᴛᴏʀꜱ:</b>
+┠ /{BotCommands.ShellCommand}: ʀᴜɴ ꜱʜᴇʟʟ ᴄᴏᴍᴍᴀɴᴅꜱ (ᴏɴʟʏ ᴏᴡɴᴇʀ).
+┠ /{BotCommands.EvalCommand}: ʀᴜɴ ᴘʏᴛʜᴏɴ ᴄᴏᴅᴇ ʟɪɴᴇ | ʟɪɴᴇꜱ (ᴏɴʟʏ ᴏᴡɴᴇʀ).
+┠ /{BotCommands.ExecCommand}: ʀᴜɴ ᴄᴏᴍᴍᴀɴᴅꜱ ɪɴ ᴇxᴇᴄ (ᴏɴʟʏ ᴏᴡɴᴇʀ).
+┠ /{BotCommands.ClearLocalsCommand}: ᴄʟᴇᴀʀ {BotCommands.EvalCommand} ᴏʀ {BotCommands.ExecCommand} ʟᴏᴄᴀʟꜱ (ᴏɴʟʏ ᴏᴡɴᴇʀ).
+┖ /exportsession: ɢᴇɴᴇʀᴀᴛᴇ ᴜꜱᴇʀ ꜱᴛʀɪɴɢꜱᴇꜱꜱɪᴏɴ ᴏꜰ ꜱᴀᴍᴇ ᴘʏʀᴏ ᴠᴇʀꜱɪᴏɴ (ᴏɴʟʏ ᴏᴡɴᴇʀ).
 
-<b>RSS Feed:</b>
-┖ /{BotCommands.RssCommand}: Open RSS Menu (Sub/Unsub/Start/Pause)
+<b>ʀꜱꜱ ꜰᴇᴇᴅ:</b>
+┖ /{BotCommands.RssCommand}: ᴏᴘᴇɴ ʀꜱꜱ ᴍᴇɴᴜ (ꜱᴜʙ/ᴜɴꜱᴜʙ/ꜱᴛᴀʀᴛ/ᴘᴀᴜꜱᴇ)
 
-<b>Extras:</b>
-┠ /{BotCommands.AddImageCommand} [url/photo]: Add Images in Bot
-┖ /{BotCommands.ImagesCommand}: Generate grid of Stored Images.''',
+<b>ᴇxᴛʀᴀꜱ:</b>
+┠ /{BotCommands.AddImageCommand} [ᴜʀʟ/ᴘʜᴏᴛᴏ]: ᴀᴅᴅ ɪᴍᴀɢᴇꜱ ɪɴ ʙᴏᴛ
+┖ /{BotCommands.ImagesCommand}: ɢᴇɴᴇʀᴀᴛᴇ ɢʀɪᴅ ᴏꜰ ꜱᴛᴏʀᴇᴅ ɪᴍᴀɢᴇꜱ.''',
 
 f'''⌬ <b><i>Miscellaneous Commands!</i></b>
 
@@ -414,6 +417,7 @@ f'''⌬ <b><i>Miscellaneous Commands!</i></b>
 
 <b>Movie/TV Shows/Drama Search:</b>
 ┠ /{BotCommands.IMDBCommand}: Search in IMDB.
+┠ /{BotCommands.PosterCommand} [name]: Search Movie/TV Show Poster via TMDB.
 ┠ /{BotCommands.AniListCommand}: Search for anime in AniList.
 ┠ /{BotCommands.AnimeHelpCommand}: Anime help guide.
 ┖ /{BotCommands.MyDramaListCommand}: Search in MyDramaList.
