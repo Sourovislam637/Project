@@ -27,7 +27,7 @@ async def fetch_json(url):
 
 async def get_poster_menu(client, message):
     if not config_dict.get('TMDB_API_KEY'):
-        return await message.reply_text("<b>⚠️ TMDB_API_KEY ᴄᴏɴꜰɪɢᴜʀᴇᴅ ɴᴀɪ! Set it via /bsetting -> Config Variables -> TMDB_API_KEY</b>")
+        return await message.reply_text("<b>⚠️ TMDB API Key is not configured.</b>")
     if len(message.command) == 1:
         return await message.reply_text("<b>⚠️ ᴘʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴍᴏᴠɪᴇ ᴏʀ ᴛᴠ ꜱʜᴏᴡ ɴᴀᴍᴇ.\n\n📌 ᴇxᴀᴍᴘʟᴇ:</b> <code>/poster naruto</code>")
 
