@@ -33,6 +33,19 @@ from .helper.themes import BotTheme
 from .modules import authorize, clone, gd_count, gd_delete, gd_list, cancel_mirror, mirror_leech, status, torrent_search, torrent_select, ytdlp, \
                      rss, shell, eval, users_settings, bot_settings, speedtest, save_msg, images, imdb, anilist, mediainfo, mydramalist, gen_pyro_sess, \
                      gd_clean, broadcast, category_select, poster, autorename
+from .modules.poster import fetch_json
+
+async def get_start_photo():
+    """
+    Fetches a fresh, random anime-girl photo URL from Rare Photo Hub for the
+    /start message, so a different photo shows up each time instead of a
+    static image. Falls back to the bot's own configured IMAGES pool if the
+    API is unreachable, so /start never breaks because of a third-party API.
+    """
+    result = await fetch_json('https://rare-photo-hub.vercel.app/api/anime-girl')
+    if result and result.get('success') and result.get('image', {}).get('url'):
+        return result['image']['url']
+    return 'IMAGES'
 
 async def stats(client, message):
     msg, btns = await get_stats(message)
@@ -63,11 +76,11 @@ async def start(client, message):
         return await sendMessage(message, msg, reply_markup)
     elif await CustomFilters.authorized(client, message):
         start_string = BotTheme('ST_MSG', help_command=f"/{BotCommands.HelpCommand}")
-        await sendMessage(message, start_string, reply_markup, photo='IMAGES')
+        await sendMessage(message, start_string, reply_markup, photo=await get_start_photo())
     elif config_dict['BOT_PM']:
-        await sendMessage(message, BotTheme('ST_BOTPM'), reply_markup, photo='IMAGES')
+        await sendMessage(message, BotTheme('ST_BOTPM'), reply_markup, photo=await get_start_photo())
     else:
-        await sendMessage(message, BotTheme('ST_UNAUTH'), reply_markup, photo='IMAGES')
+        await sendMessage(message, BotTheme('ST_UNAUTH'), reply_markup, photo=await get_start_photo())
     await DbManger().update_pm_users(message.from_user.id)
 
 
