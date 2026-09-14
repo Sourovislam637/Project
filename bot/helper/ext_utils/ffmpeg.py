@@ -22,7 +22,7 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
 
     cmd = [bot_cache['pkgs'][2], '-i', media_file, '-map', '0']
 
-    # মাল্টি মেটাডেটা পার্সিং ইঞ্জিন
+    # Multi-metadata parsing engine
     meta_dict = {}
     if metadata and ':' in metadata:
         pairs = metadata.split('|')
@@ -32,7 +32,7 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
                 meta_dict[k.strip().lower()] = v.strip()
 
     if meta_dict:
-        # Title লজিক হ্যান্ডেলিং
+        # Title logic handling
         title_val = meta_dict.get('title', '')
         if title_val:
             if basename.strip().lower().startswith("www"):
@@ -46,7 +46,7 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
 
         cmd.extend(['-metadata', f'title={title_metadata}'])
 
-        # ডাটা ম্যাপিং ডিকশনারি
+        # Data mapping dictionary
         mapping = {
             'author': 'author',
             'artist': 'artist',
@@ -71,7 +71,7 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
             if val := meta_dict.get(user_key):
                 cmd.extend(['-metadata', f'{ff_key}={val}'])
 
-        # স্ট্রিম ওয়াইজ টাইটেল ইনজেকশন
+        # Per-stream title injection
         fallback_stream_title = meta_dict.get('title') or meta_dict.get('channel') or meta_dict.get('author') or ""
         if fallback_stream_title:
             cmd.extend([
@@ -80,7 +80,7 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
                 '-metadata:s:s', f'title={meta_dict.get("subtitle", fallback_stream_title)}'
             ])
     else:
-        # ওল্ড সিঙ্গেল স্ট্রিং ফরম্যাটের ব্যাকওয়ার্ড কম্প্যাটিবিলিটি
+        # Backward compatibility for the old single-string format
         if metadata:
             if basename.strip().lower().startswith("www"):
                 title_metadata = f"{metadata} - {basenameX}"
