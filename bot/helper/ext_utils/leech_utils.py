@@ -175,8 +175,13 @@ async def get_audio_thumb(audio_file):
     status = await create_subprocess_exec(*cmd, stderr=PIPE)
     if await status.wait() != 0 or not await aiopath.exists(des_dir):
         err = (await status.stderr.read()).decode().strip()
-        LOGGER.error(
-            f'Error while extracting thumbnail from audio. Name: {audio_file} stderr: {err}')
+        if 'does not contain any stream' in err:
+            # Most audio files (e.g. FLAC rips) simply have no embedded
+            # cover art - this is normal, not worth logging as an error.
+            LOGGER.info(f'No embedded thumbnail found in audio: {audio_file}')
+        else:
+            LOGGER.error(
+                f'Error while extracting thumbnail from audio. Name: {audio_file} stderr: {err}')
         return None
     return des_dir
 
@@ -302,9 +307,19 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False, has_cust
     # Extract meta info once to feed both autorename and caption dynamically
     dur, qual, lang, subs = 0, "", "", ""
     fsize = ""
-    if up_path and await aiopath.exists(up_path):
+    # Non-media companion files (cue sheets, rip logs, playlists, images,
+    # subtitles etc.) that often sit alongside audio/video in a folder can't
+    # be probed by ffprobe - skip them instead of logging an ffprobe error
+    # for every one of them.
+    NON_MEDIA_EXTS = ('.cue', '.log', '.m3u', '.m3u8', '.txt', '.nfo', '.sfv',
+                       '.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp',
+                       '.srt', '.ass', '.ssa', '.vtt', '.url', '.md5', '.sha1')
+    is_probeable = ospath.splitext(orig_file)[1].lower() not in NON_MEDIA_EXTS
+    if up_path and is_probeable and await aiopath.exists(up_path):
         fsize = get_readable_file_size(await aiopath.getsize(up_path))
         dur, qual, lang, subs = await get_media_info(up_path, True)
+    elif up_path and await aiopath.exists(up_path):
+        fsize = get_readable_file_size(await aiopath.getsize(up_path))
 
     if not isMirror:
         file_ = await get_autorename(file_, user_id, size=fsize, media_quality=qual, lang=lang, subs=subs, caption=caption, skip=has_custom_name)
