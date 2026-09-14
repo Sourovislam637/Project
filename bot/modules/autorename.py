@@ -20,36 +20,37 @@ def trun(text, limit=60):
     text = str(text)
     return text[:limit] + "..." if len(text) > limit else text
 
-# Auto Rename ফরম্যাটে ব্যবহারযোগ্য একমাত্র বৈধ Tag গুলো
+# The only tags allowed in an Auto Rename format string
 VALID_AUTORENAME_TAGS = {'title', 'season', 'episode',
                           'quality', 'codec', 'audio', 'sub', 'size', 'language'}
 
 def validate_autorename_format(format_str):
     """
-    ইউজারের ফরম্যাটে থাকা {tag} গুলোর মধ্যে কোনটা ভুল/Unsupported (যেমন Typo:
-    {qualilty}) তা রিটার্ন করে। এই ধরনের ভুল Tag থাকলে get_autorename() একটা
-    KeyError রেইজ করে চুপচাপ Original Filename রিটার্ন করে দেয় (নিচে দেখুন),
-    যেটা ইউজারের কাছে মনে হয় "Auto Rename কাজ করছে না" - অথচ কারণ বোঝা যায় না।
-    তাই Format সেভ করার আগেই এটা Validate করে নেওয়া উচিত।
+    Returns any {tag} used in the user's format that isn't supported (e.g. a
+    typo like {qualilty}). An unsupported tag makes get_autorename() raise a
+    KeyError and silently fall back to the original filename, which just
+    looks like "Auto Rename isn't working" to the user with no clue why.
+    So the format should be validated before it's saved.
     """
     used_tags = set(re.findall(r'\{([a-zA-Z_]+)\}', format_str))
     return used_tags - VALID_AUTORENAME_TAGS
 
 async def resolve_auto_title(search_name):
     """
-    {title} Tag ব্যবহার হয়েছে কিন্তু Custom Title সেট করা নেই - এমন ক্ষেত্রে
-    ফাইলের ক্লিন করা নাম (search_name) দিয়ে প্রথমে AniList এ Anime Search করা
-    হয়। মিল পেলে সেটার English/Romaji Title রিটার্ন হয়। Anime না হলে (মিল না
-    পেলে) TMDB তে Movie/TV/Drama Search করা হয় (TMDB_API_KEY লাগবে, /bsetting
-    থেকে সেট করা যায়)। কোনোটাতেই মিল না পেলে None রিটার্ন করে - তখন Caller
-    ফাইলের ক্লিন নামটাই Title হিসেবে ব্যবহার করবে।
+    Used when the format uses {title} but the user has no Custom Title set.
+    Searches AniList for an anime match using the cleaned filename
+    (search_name) first. If found, returns its English/Romaji title. If it's
+    not an anime (no match), falls back to a TMDB Movie/TV/Drama search
+    (requires TMDB_API_KEY, configurable via /bsetting). Returns None if
+    neither finds a match, in which case the caller falls back to the
+    cleaned filename as the title.
     """
     if not search_name or not search_name.strip():
         return None
     search_name = search_name.strip()
 
-    # 1) AniList Anime Search (Blocking call, তাই sync_to_async দিয়ে Thread এ চালানো
-    #    হচ্ছে যাতে Event Loop ব্লক না হয়ে যায়)
+    # 1) AniList anime search. This is a blocking call, so it's run via
+    #    sync_to_async in a thread to avoid blocking the event loop.
     try:
         anires = await sync_to_async(
             rpost, 'https://graphql.anilist.co',
@@ -64,7 +65,7 @@ async def resolve_auto_title(search_name):
     except Exception as e:
         LOGGER.error(f"Auto Rename: AniList title lookup failed for '{search_name}': {e}")
 
-    # 2) TMDB Multi Search (Movie / TV / Drama) - Anime না হলে এইখানে আসবে
+    # 2) TMDB multi search (Movie / TV / Drama) - reached when it's not anime
     if config_dict.get('TMDB_API_KEY'):
         try:
             safe_query = quote_plus(search_name)
@@ -93,11 +94,11 @@ async def get_autorename(filename, user_id, size="", media_quality="", lang="", 
     """
     user_dict = user_data.get(user_id, {})
 
-    # ম্যানুয়াল Rename Command (-n / -name) ব্যবহার করা হলে Autorename কাজ করবে না
+    # A manual rename command (-n / -name) always wins over Auto Rename
     if skip:
         return filename
 
-    # যদি ইউজারের Auto Rename বন্ধ থাকে, তবে অরিজিনাল নাম রিটার্ন করবে
+    # If the user has Auto Rename disabled, return the original filename
     if not user_dict.get('autorename', False):
         return filename
 
@@ -108,14 +109,16 @@ async def get_autorename(filename, user_id, size="", media_quality="", lang="", 
 
     name, ext = os.path.splitext(filename)
 
-    # ইউজার Format এর একদম শেষে নিজে Extension (.mkv, .mp4 ইত্যাদি) বসিয়েছেন কিনা চেক করা।
-    # দিলে সেটাই ব্যবহার হবে, না দিলে Old/Original Video এর Extension অনুযায়ী যোগ হবে।
+    # Check whether the user put an explicit extension (.mkv, .mp4 etc.) at
+    # the very end of the format. If so, that wins; otherwise the original
+    # file's extension is kept.
     has_custom_ext = bool(re.search(r'\.[A-Za-z0-9]{2,5}$', format_str.strip()))
 
-    # ফাইলের নামে না পেলে File Caption থেকে Season/Episode খোঁজার জন্য ব্যাকআপ টেক্সট
+    # Backup text to look for Season/Episode in the file caption if not
+    # found in the filename itself
     caption_name = os.path.splitext(caption.split('\n')[0])[0] if caption else ""
 
-    # তথ্য বের করা (শুধুমাত্র সংখ্যা বের করা হবে যাতে S{season}E{episode} কাস্টমাইজ করা যায়)
+    # Extract info (only the numbers, so S{season}E{episode} can be customized)
     season_match = re.search(r'(?:S|Season\s*)(\d{1,2})', name, re.IGNORECASE)
     if not season_match and caption_name:
         season_match = re.search(r'(?:S|Season\s*)(\d{1,2})', caption_name, re.IGNORECASE)
@@ -138,16 +141,16 @@ async def get_autorename(filename, user_id, size="", media_quality="", lang="", 
     sub_match = re.search(r'(ESub|HC-ENG|MSub|Multi[\s\-]?Sub|Subbed)', name, re.IGNORECASE)
     sub = sub_match.group(1) if sub_match else subs
 
-    # ফাইলের নাম পরিষ্কার করা (Cleaning the Original Name & Brackets)
+    # Clean the original filename (strip brackets/parentheses and noise words)
     clean_title = re.sub(r'\[.*?\]|\(.*?\)', '', name) 
     noise_pattern = r'(S\d{1,2}|E\d{1,3}|Ep\s*\d{1,3}|Episode\s*\d{1,3}|480p|720p|1080p|1440p|2160p|4K|x264|x265|HEVC|AV1|H264|H265|10bit|10Bit|AVC|BluRay|WEB-DL|WEBRip|HDRip|HDTV|Dual[\s\-]?Audio|Multi[\s\-]?Audio|Hindi|English|Tamil|Telugu|Malayalam|Kannada|Bengali|ESub|HC-ENG|MSub|Multi[\s\-]?Sub|Subbed|Audio)'
     clean_title = re.sub(noise_pattern, '', clean_title, flags=re.IGNORECASE)
     clean_title = re.sub(r'(\s|-|\.)+', ' ', clean_title).strip() 
 
-    # ইউজারের Custom Title চেক করা। Custom Title না থাকলে এবং Format এ {title}
-    # ব্যবহার হলে, ফাইলের নাম দিয়ে AniList/TMDB Search করে Title বের করার
-    # চেষ্টা করা হয় (resolve_auto_title)। কোনোভাবেই না পেলে ক্লিন করা ফাইলের
-    # নামটাই Fallback হিসেবে ব্যবহার হবে।
+    # Check the user's Custom Title. If there isn't one and the format uses
+    # {title}, try to resolve a proper title via AniList/TMDB
+    # (resolve_auto_title). If that fails too, fall back to the cleaned
+    # filename as the title.
     custom_title = user_dict.get('custom_title', '')
     if custom_title:
         final_title = custom_title
@@ -157,7 +160,7 @@ async def get_autorename(filename, user_id, size="", media_quality="", lang="", 
         final_title = clean_title
 
     try:
-        # ইউজারের ফরম্যাট অনুযায়ী নাম সাজানো
+        # Build the new name from the user's format
         new_name = format_str.format(
             title=final_title,
             season=season,
@@ -170,30 +173,30 @@ async def get_autorename(filename, user_id, size="", media_quality="", lang="", 
             language=audio
         )
         
-        # যদি ফাইলে সিজন বা এপিসোড না থাকে, তবে ফাঁকা 'SE' মুছে ফেলা
+        # If the file has no season or episode, remove the leftover empty 'SE'
         if not season and not episode:
             new_name = new_name.replace('SE', '').replace('S E', '')
         elif not season and episode:
             new_name = new_name.replace('SE', 'E')
         elif season and not episode:
-            # Episode না পেলে "S02E" এর মতো একটা ঝুলে থাকা 'E' রয়ে যেত
-            # (যেমন: "...S2..." থাকা ফাইলে Episode না থাকলে ফলাফল হতো
-            # "S02E.mp4")। এখানে শুধু Season এর ঠিক পরের ফাঁকা E-টাই সরানো
-            # হচ্ছে, টাইটেলের অন্য কোনো 'E' অক্ষর নয়।
+            # Without an episode, a dangling 'E' would be left after the season
+            # (e.g. a file with "...S2..." but no episode would end up as
+            # "S02E.mp4"). This only removes the empty 'E' right after the
+            # season, not any other 'E' character in the title.
             new_name = re.sub(rf'S{re.escape(season)}E(?!\d)', f'S{season}', new_name)
             
-        # তৈরি হওয়া এক্সট্রা স্পেস, ড্যাশ বা ডট ক্লিন করা (Safeguard)
+        # Clean up extra spaces, dashes or dots left behind (safeguard)
         new_name = re.sub(r'\s+', ' ', new_name)
         new_name = re.sub(r'-\s*-', '-', new_name)
         new_name = re.sub(r'\.\s*\.', '.', new_name)
         new_name = new_name.strip(' -.')
         
-        # যদি কোনো কারণে নতুন নাম খালি হয়ে যায়, তবে ব্যাকআপ হিসেবে টাইটেল দিবে
+        # If the new name somehow ends up empty, fall back to the title
         if not new_name:
             new_name = final_title
 
-        # Extension Handling: Format এ ইউজার নিজে Extension দিলে সেটাই থাকবে,
-        # না দিলে Original/Old Video এর Extension যোগ হবে।
+        # Extension handling: if the user gave an explicit extension in the
+        # format, that's kept; otherwise the original file's extension is used.
         final_name = new_name if has_custom_ext else f"{new_name}{ext}"
 
         LOGGER.info(f"Auto Renamed: {filename} -> {final_name}")
