@@ -2,8 +2,8 @@
 from pyrogram.handlers import MessageHandler
 from pyrogram.filters import command, regex
 
-from bot import user_data, DATABASE_URL, bot, LOGGER
-from bot.helper.telegram_helper.message_utils import sendMessage
+from bot import user_data, DATABASE_URL, bot, LOGGER, OWNER_ID
+from bot.helper.telegram_helper.message_utils import sendMessage, user_info
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.ext_utils.db_handler import DbManger
@@ -76,6 +76,28 @@ async def unauthorize(client, message):
     else:
         msg = 'Already Unauthorized!'
     await sendMessage(message, msg)
+
+
+async def viewSudo(client, message):
+    sudo_ids = [uid for uid, udata in user_data.items() if udata.get('is_sudo')]
+    if not sudo_ids:
+        return await sendMessage(message, "<i>No Sudo Users Found!</i>")
+
+    text = "⌬ <b>Sudo Users List :</b>\n\n"
+    try:
+        owner = await user_info(OWNER_ID)
+        owner_name = owner.mention(style='html') if owner else f"<code>{OWNER_ID}</code>"
+    except Exception:
+        owner_name = f"<code>{OWNER_ID}</code>"
+    text += f"➲ <b>Owner :</b> {owner_name} [ <code>{OWNER_ID}</code> ]\n\n"
+
+    for idx, uid in enumerate(sudo_ids, 1):
+        u = await user_info(uid)
+        mention = u.mention(style='html') if u else "Unknown User"
+        full_name = f"{u.first_name}{f' {u.last_name}' if u and u.last_name else ''}" if u else "Unknown"
+        text += f"{idx}. {mention}\n   ┖ <b>Name:</b> {full_name} | <b>ID:</b> <code>{uid}</code>\n"
+
+    await sendMessage(message, text)
 
 
 async def addSudo(client, message):
@@ -170,6 +192,8 @@ bot.add_handler(MessageHandler(addSudo, filters=command(
     BotCommands.AddSudoCommand) & CustomFilters.sudo))
 bot.add_handler(MessageHandler(removeSudo, filters=command(
     BotCommands.RmSudoCommand) & CustomFilters.sudo))
+bot.add_handler(MessageHandler(viewSudo, filters=command(
+    BotCommands.ViewSudoCommand) & CustomFilters.sudo))
 bot.add_handler(MessageHandler(addBlackList, filters=command(
     BotCommands.AddBlackListCommand) & CustomFilters.sudo))
 bot.add_handler(MessageHandler(rmBlackList, filters=command(
