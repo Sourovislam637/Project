@@ -32,6 +32,7 @@ class _BotCommands:
         self.RmBlackListCommand = [f'rmblacklist{CMD_SUFFIX}', f'rbl{CMD_SUFFIX}']
         self.AddSudoCommand = f'addsudo{CMD_SUFFIX}'
         self.RmSudoCommand = f'rmsudo{CMD_SUFFIX}'
+        self.ViewSudoCommand = f'viewsudo{CMD_SUFFIX}'
         self.PingCommand = [f'ping{CMD_SUFFIX}', f'p{CMD_SUFFIX}']
         self.RestartCommand = [f'restart{CMD_SUFFIX}', f'r{CMD_SUFFIX}', 'restartall']
         self.StatsCommand = [f'stats{CMD_SUFFIX}', f'st{CMD_SUFFIX}']
