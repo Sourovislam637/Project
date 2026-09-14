@@ -22,25 +22,26 @@ from bot.helper.ext_utils.telegraph_helper import telegraph
 
 async def remux_container(inp_path, out_path):
     """
-    Auto Rename এর Format এ ইউজার শেষে নিজের Extension (যেমন .mkv) বসিয়ে দিলে
-    আগে শুধু ফাইলটার নাম পাল্টে ফেলা হতো (os.rename) - আসল Container/Bytes
-    অপরিবর্তিতই থাকতো। অর্থাৎ একটা প্রকৃত .mp4 ফাইলকে শুধু নাম বদলে .mkv
-    বানিয়ে দেওয়া হতো (বা উল্টোটা)। VLC/MX Player এর মতো Player গুলো আসল
-    Content দেখে চালায় তাই সমস্যা হয় না, কিন্তু Telegram নিজে ফাইলের
-    Structure (moov/EBML ইত্যাদি) পার্স করে Streaming/Preview বানায় - Extension
-    আর আসল Container না মিললে সেখানেই Audio বাদ পড়া, Download আটকে থাকা, বা
-    Telegram এ Play না হওয়ার মতো সমস্যা হয়।
+    When the user's Auto Rename format has an explicit extension at the end
+    (e.g. .mkv), previously only the filename was changed (os.rename) - the
+    actual container/bytes stayed unchanged. So a real .mp4 file would just
+    get renamed to .mkv (or vice versa) without actually being re-muxed.
+    Players like VLC/MX Player detect the real content and play it fine, but
+    Telegram itself parses the file's structure (moov/EBML etc.) to build
+    streaming/preview, and a mismatch between the extension and the real
+    container causes issues there - missing audio, stuck downloads, or the
+    file not playing on Telegram at all.
 
-    তাই Extension সত্যিই পাল্টাতে হলে এখানে আসল Remux (Stream Copy, কোনো
-    Re-encode ছাড়াই - তাই Fast এবং Quality Loss হয় না) করে দেওয়া হয়, যাতে
-    Bytes ও Extension দুটোই মিলে যায়।
+    So when the extension is genuinely being changed, an actual remux
+    (stream copy, no re-encoding - so it's fast and lossless) is done here,
+    so both the bytes and the extension match.
     """
-    out_ext = os.path.splitext(out_path)[1].lower()
+    out_ext = ospath.splitext(out_path)[1].lower()
     cmd = [bot_cache['pkgs'][2], '-hide_banner', '-loglevel', 'error',
            '-i', inp_path, '-map', '0', '-c', 'copy']
     if out_ext == '.mp4':
-        # MP4 Container অনেক Subtitle Codec (যেমন ASS/SRT থেকে সরাসরি) রাখতে
-        # পারে না, তাই Text Subtitle কে mov_text এ Convert করা হচ্ছে।
+        # The MP4 container can't hold many subtitle codecs directly (e.g.
+        # ASS/SRT), so text subtitles are converted to mov_text.
         cmd += ['-c:s', 'mov_text']
     cmd.append(out_path)
 
@@ -55,9 +56,9 @@ async def remux_container(inp_path, out_path):
         await aioremove(out_path)
 
     if out_ext == '.mp4':
-        # Bitmap/PGS এর মতো Subtitle বা অন্য Incompatible Stream থাকলে সেগুলো
-        # বাদ দিয়ে শুধু Video + Audio নিয়ে আবার চেষ্টা করা হচ্ছে, যাতে অন্তত
-        # Video-Audio ঠিক থাকা একটা File পাওয়া যায়।
+        # If there's a bitmap/PGS subtitle or another incompatible stream,
+        # drop it and retry with just video + audio, so at least a file with
+        # working video/audio is produced.
         cmd2 = [bot_cache['pkgs'][2], '-hide_banner', '-loglevel', 'error',
                 '-i', inp_path, '-map', '0:v', '-map', '0:a?', '-c', 'copy', out_path]
         proc2 = await create_subprocess_exec(*cmd2, stderr=PIPE)
