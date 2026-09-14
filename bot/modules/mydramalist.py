@@ -14,21 +14,21 @@ from bot.helper.telegram_helper.message_utils import sendMessage, editMessage
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 
-# ========== আপনার TMDB API Key এখানে বসান ==========
-TMDB_API_KEY = "4b061466449ce519d5884948a9671e63"
-# ===================================================
+# TMDB API Key is configured via /bsetting -> Config Variables -> TMDB_API_KEY
 
 LIST_ITEMS = 4
 IMDB_GENRE_EMOJI = {"Action": "🚀", "Adult": "🔞", "Adventure": "🌋", "Animation": "🎠", "Biography": "📜", "Comedy": "🪗", "Crime": "🔪", "Documentary": "🎞", "Drama": "🎭", "Family": "👨‍👩‍👧‍👦", "Fantasy": "🫧", "Film Noir": "🎯", "Game Show": "🎮", "History": "🏛", "Horror": "🧟", "Musical": "🎻", "Music": "🎸", "Mystery": "🧳", "News": "📰", "Reality-TV": "🖥", "Romance": "🥰", "Sci-Fi": "🌠", "Short": "📝", "Sport": "⛳", "Talk-Show": "👨‍🍳", "Thriller": "🗡", "War": "⚔", "Western": "🪩"}
 
 async def mydramalist_search(_, message):
     if ' ' in message.text:
+        if not config_dict.get('TMDB_API_KEY'):
+            return await sendMessage(message, "<b>⚠️ TMDB API Key is not configured.</b>")
         temp = await sendMessage(message, '<i>Searching TMDB ...</i>')
         title = message.text.split(' ', 1)[1]
         user_id = message.from_user.id
         buttons = ButtonMaker()
         
-        url = f"https://api.themoviedb.org/3/search/multi?api_key={TMDB_API_KEY}&query={q(title)}"
+        url = f"https://api.themoviedb.org/3/search/multi?api_key={config_dict['TMDB_API_KEY']}&query={q(title)}"
         
         async with ClientSession() as sess:
             async with sess.get(url) as resp:
@@ -57,7 +57,7 @@ async def mydramalist_search(_, message):
 
 async def extract_MDL(slug):
     media_type, tmdb_id = slug.split('_')
-    url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}?api_key={TMDB_API_KEY}&append_to_response=credits"
+    url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}?api_key={config_dict['TMDB_API_KEY']}&append_to_response=credits"
     
     async with ClientSession() as sess:
         async with sess.get(url) as resp:
