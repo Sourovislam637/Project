@@ -197,9 +197,10 @@ class TgUploader:
         return True
 
     async def __prepare_file(self, prefile_, dirpath):
+        has_custom_name = bool(getattr(self.__listener, 'newname', ''))
         try:
             file_, cap_mono = await format_filename(prefile_, self.__user_id, dirpath,
-                                                      has_custom_name=bool(getattr(self.__listener, 'newname', '')),
+                                                      has_custom_name=has_custom_name,
                                                       caption=getattr(self.__listener, 'orig_caption', ''))
         except Exception as err:
             return await self.__listener.onUploadError(f'Error in Format Filename : {err}')
@@ -210,8 +211,16 @@ class TgUploader:
             # (.mkv/.mp4) than the original, just renaming isn't enough - the
             # actual container needs to be remuxed, otherwise Telegram has
             # trouble playing/downloading it (see remux_container's docstring).
-            remux_needed = bool(old_ext) and bool(new_ext) and old_ext != new_ext \
+            #
+            # This only applies to Auto Rename. For a manual rename (e.g.
+            # "/l -n filename.mkv"), the user's given extension is just a
+            # display name - the file's actual container/format is always
+            # kept as-is, no remux, no extension override.
+            remux_needed = not has_custom_name and bool(old_ext) and bool(new_ext) and old_ext != new_ext \
                 and old_ext in ('.mkv', '.mp4') and new_ext in ('.mkv', '.mp4')
+            if has_custom_name and old_ext and new_ext and old_ext != new_ext:
+                file_ = f"{ospath.splitext(file_)[0]}{old_ext}"
+                new_ext = old_ext
 
             seed_copy = self.__listener.seed and not self.__listener.newDir and not dirpath.endswith("/splited_files_mltb")
             if seed_copy:
