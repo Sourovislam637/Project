@@ -30,6 +30,7 @@ class TgUploader:
 
     def __init__(self, name=None, path=None, listener=None):
         self.name = name
+        self.__last_renamed_name = None
         self.__last_uploaded = 0
         self.__processed_bytes = 0
         self.__listener = listener
@@ -348,6 +349,12 @@ class TgUploader:
                         return
                     self.__prm_media = True if f_size > 2097152000 else False
                     cap_mono, file_ = await self.__prepare_file(file_, dirpath)
+                    # Track the last renamed file's *final* name (with
+                    # quality etc. filled in by Auto Rename). Used below,
+                    # only for a single-file leech, to fix the top caption's
+                    # Name so it matches the actual uploaded filename
+                    # instead of the original pre-rename task name.
+                    self.__last_renamed_name = file_
                     if self.__last_msg_in_group:
                         group_lists = [x for v in self.__media_dict.values()
                                        for x in v.keys()]
@@ -398,6 +405,8 @@ class TgUploader:
         if self.__retry_error:
             await self.__listener.onUploadError('Unknown Error Occurred. Check logs & Contact Bot Owner!')
             return
+        if self.__total_files == 1 and self.__last_renamed_name:
+            self.name = self.__last_renamed_name
         LOGGER.info(f"Leech Completed: {self.name}")
         await self.__listener.onUploadComplete(None, size, self.__msgs_dict, self.__total_files, self.__corrupted, self.name)
 
