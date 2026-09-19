@@ -114,35 +114,57 @@ async def get_autorename(filename, user_id, size="", media_quality="", lang="", 
     # file's extension is kept.
     has_custom_ext = bool(re.search(r'\.[A-Za-z0-9]{2,5}$', format_str.strip()))
 
-    # Backup text to look for Season/Episode in the file caption if not
-    # found in the filename itself
-    caption_name = os.path.splitext(caption.split('\n')[0])[0] if caption else ""
+    # Backup source to look for Season/Episode/Quality/Title etc. when
+    # they're not found in the filename itself. Many long anime/movie names
+    # push the useful bits (season, episode, quality) toward the end of the
+    # filename where Telegram may visually truncate it, and some uploaders
+    # put this info only in the caption, in many different styles
+    # (e.g. "Episode :- 11", "Episode: 11", "Ep- 11", "S02E07").
+    caption_text = caption or ""
 
-    # Extract info (only the numbers, so S{season}E{episode} can be customized)
-    season_match = re.search(r'(?:S|Season\s*)(\d{1,2})', name, re.IGNORECASE)
-    if not season_match and caption_name:
-        season_match = re.search(r'(?:S|Season\s*)(\d{1,2})', caption_name, re.IGNORECASE)
-    season = season_match.group(1).zfill(2) if season_match else ""
+    def _extract(patterns, *texts):
+        """Try each regex pattern against each text in order (filename
+        first, then caption) and return the first capture group matched."""
+        for text in texts:
+            if not text:
+                continue
+            for pat in patterns:
+                if m := re.search(pat, text, re.IGNORECASE):
+                    return m.group(1)
+        return None
 
-    episode_match = re.search(r'(?:E|Ep|Episode\s*)(\d{1,3})', name, re.IGNORECASE)
-    if not episode_match and caption_name:
-        episode_match = re.search(r'(?:E|Ep|Episode\s*)(\d{1,3})', caption_name, re.IGNORECASE)
-    episode = episode_match.group(1).zfill(2) if episode_match else ""
+    # Word form ("Season 01", "Episode :- 11", "Ep- 11") tried first, then
+    # the compact filename form ("S02", "E07") as a fallback.
+    season = _extract(
+        [r'(?:Season)\.?\s*[:\-]*\s*(\d{1,2})', r'S(\d{1,2})(?!\d)'],
+        name, caption_text)
+    season = season.zfill(2) if season else ""
 
-    quality_match = re.search(r'(480p|720p|1080p|1440p|2160p|4K)', name, re.IGNORECASE)
-    quality = quality_match.group(1) if quality_match else media_quality
-    
-    codec_match = re.search(r'(x264|x265|HEVC|AV1|H264|H265|10bit|10Bit|AVC)', name, re.IGNORECASE)
-    codec = codec_match.group(1) if codec_match else ""
-    
-    audio_match = re.search(r'(Dual[\s\-]?Audio|Multi[\s\-]?Audio|Hindi|English|Tamil|Telugu|Malayalam|Kannada|Bengali)', name, re.IGNORECASE)
-    audio = audio_match.group(1).title() if audio_match else lang
-    
-    sub_match = re.search(r'(ESub|HC-ENG|MSub|Multi[\s\-]?Sub|Subbed)', name, re.IGNORECASE)
-    sub = sub_match.group(1) if sub_match else subs
+    episode = _extract(
+        [r'(?:Episode|Ep)\.?\s*[:\-]*\s*(\d{1,3})', r'E(\d{1,3})(?!\d)'],
+        name, caption_text)
+    episode = episode.zfill(2) if episode else ""
+
+    quality = _extract([r'(480p|720p|1080p|1440p|2160p|4K)'], name, caption_text) or media_quality
+
+    codec = _extract([r'(x264|x265|HEVC|AV1|H264|H265|10bit|10Bit|AVC)'], name, caption_text) or ""
+
+    audio = _extract(
+        [r'(Dual[\s\-]?Audio|Multi[\s\-]?Audio|Hindi|English|Tamil|Telugu|Malayalam|Kannada|Bengali)'],
+        name, caption_text)
+    audio = audio.title() if audio else lang
+
+    sub = _extract([r'(ESub|HC-ENG|MSub|Multi[\s\-]?Sub|Subbed)'], name, caption_text) or subs
+
+    # A structured caption often has its own explicit "Title - ..." /
+    # "Title: ..." line, which tends to be cleaner and more reliable than
+    # whatever can be scraped out of the filename - use it when present.
+    caption_title = None
+    if caption_text and (m := re.search(r'(?:^|\n)\s*Title\s*[:\-]+\s*(.+)', caption_text, re.IGNORECASE)):
+        caption_title = m.group(1).strip()
 
     # Clean the original filename (strip brackets/parentheses and noise words)
-    clean_title = re.sub(r'\[.*?\]|\(.*?\)', '', name) 
+    clean_title = caption_title if caption_title else re.sub(r'\[.*?\]|\(.*?\)', '', name)
     noise_pattern = r'(S\d{1,2}|E\d{1,3}|Ep\s*\d{1,3}|Episode\s*\d{1,3}|480p|720p|1080p|1440p|2160p|4K|x264|x265|HEVC|AV1|H264|H265|10bit|10Bit|AVC|BluRay|WEB-DL|WEBRip|HDRip|HDTV|Dual[\s\-]?Audio|Multi[\s\-]?Audio|Hindi|English|Tamil|Telugu|Malayalam|Kannada|Bengali|ESub|HC-ENG|MSub|Multi[\s\-]?Sub|Subbed|Audio)'
     clean_title = re.sub(noise_pattern, '', clean_title, flags=re.IGNORECASE)
     clean_title = re.sub(r'(\s|-|\.)+', ' ', clean_title).strip() 
