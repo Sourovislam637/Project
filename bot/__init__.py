@@ -886,5 +886,62 @@ def _global_asyncio_error_handler(loop, context):
         LOGGER.error(msg)
 
 bot_loop.set_exception_handler(_global_asyncio_error_handler)
+
+def _patch_pyrogram_listener_future_bug():
+    """
+    Works around a pyrofork bug (confirmed upstream, not something in this
+    bot's own code) where CallbackQueryHandler/MessageHandler's internal
+    resolve_future_or_callback() sometimes ends up doing
+    `await self.original_callback(...)` while self.original_callback is
+    actually an asyncio.Future (used by pyrofork's own listen()/ask()
+    machinery), not our registered callback function. That raises
+    "TypeError: object Future can't be used in 'await' expression" -
+    silently swallowing the update *before* our own handler ever runs, which
+    is what makes buttons (Confirm/Select Files/etc.) look unresponsive.
+
+    This must run before any of our modules register their handlers
+    (bot/modules/*.py), since it patches the class - handlers created after
+    this point pick up the safe version automatically.
+    """
+    try:
+        from pyrogram.handlers.callback_query_handler import CallbackQueryHandler
+        from pyrogram.handlers.message_handler import MessageHandler
+    except Exception as e:
+        log_error(f"Could not patch pyrogram Future/callback dispatch bug (import failed): {e}")
+        return
+
+    from asyncio import Future
+
+    patched_any = False
+    for handler_cls in (CallbackQueryHandler, MessageHandler):
+        original_resolve = getattr(handler_cls, 'resolve_future_or_callback', None)
+        if original_resolve is None:
+            continue
+
+        async def patched_resolve(self, client, update, *args, _orig=original_resolve):
+            cb = getattr(self, 'original_callback', None)
+            # If this handler's callback is actually a pending Future
+            # (pyrofork's own listen()/ask() usage), resolve it directly
+            # instead of trying to await it.
+            if isinstance(cb, Future):
+                if not cb.done():
+                    cb.set_result(update)
+                return
+            try:
+                await _orig(self, client, update, *args)
+            except TypeError as e:
+                if "Future" in str(e):
+                    LOGGER.warning(f"Swallowed pyrofork Future/callback dispatch bug: {e}")
+                else:
+                    raise
+
+        handler_cls.resolve_future_or_callback = patched_resolve
+        patched_any = True
+
+    if patched_any:
+        log_info("Patched pyrogram/pyrofork Future-vs-callback dispatch bug.")
+
+_patch_pyrogram_listener_future_bug()
+
 bot_name = bot.me.username
 scheduler = AsyncIOScheduler(timezone=str(get_localzone()), event_loop=bot_loop)
