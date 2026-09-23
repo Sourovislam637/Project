@@ -6,8 +6,13 @@ class KPSMLStyle:
     ST_BN1_URL = 'https://t.me/Rare_Leech_Mirror_Hub'
     ST_BN2_NAME = 'ᴜᴘᴅᴀᴛᴇ ᴄʜᴀɴɴᴇʟ'
     ST_BN2_URL = 'https://t.me/Rare_Bots_Hub'
-    ST_MSG = '''<b><i>This bot can mirror all your links|files|torrents to Google Drive or any rclone cloud or to telegram or to ddl servers.</i>\n
-Type {help_command} to get a list of available commands</b>'''
+    ST_MSG = '''⌬ <b><i>Welcome!</i></b>
+
+➲ <b>Leech</b> your files, links &amp; torrents straight to Telegram - fast, and in your own custom filename format.
+➲ <b>Auto Rename</b> handles Anime/Movie/Series naming for you automatically - clean names, every time.
+➲ <spoiler>Mirror to Google Drive / Rclone cloud / DDL servers is also supported.</spoiler>
+
+Type {help_command} to see everything I can do.'''
     ST_BOTPM = '''<i>Now, This bot will send all your files and links here. Start Using ...</i>'''
     ST_UNAUTH = '''<i>You Are not authorized user! Deploy your own Rare Mirror-Leech bot</i>'''
     OWN_TOKEN_GENERATE = '''<b>Temporary Token is not yours!</b>\n\n<i>Kindly generate your own.</i>'''
