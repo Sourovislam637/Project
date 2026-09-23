@@ -143,7 +143,25 @@ async def get_autorename(filename, user_id, size="", media_quality="", lang="", 
     episode = _extract(
         [r'(?:Episode|Ep)\.?\s*[:\-]*\s*(\d{1,3})', r'E(\d{1,3})(?!\d)'],
         name, caption_text)
+    if not episode:
+        # Some uploaders just put the episode number at the very start of
+        # the filename with no S/E/Episode marker at all, e.g.
+        # "01 Shikimori's Not Just a Cutie Dual 480p.mkv" (single-season
+        # anime, season not mentioned anywhere). Only trust this when the
+        # number is zero-padded (01, 02, ... 09) since a real title
+        # essentially never starts with a leading zero - this keeps titles
+        # that just happen to start with a plain number (e.g. "86 Eighty
+        # Six", "91 Days") from being misread as an episode number.
+        if m := re.match(r"^(0\d{1,2})(?!\d)[\s._-]", name.strip()):
+            episode = m.group(1)
     episode = episode.zfill(2) if episode else ""
+
+    if not season and episode:
+        # No season marker found anywhere, but an episode number was found -
+        # almost always means a single-season show that just didn't bother
+        # tagging the season. Default to Season 01 instead of leaving
+        # {season} blank.
+        season = "01"
 
     quality = _extract([r'(480p|720p|1080p|1440p|2160p|4K)'], name, caption_text) or media_quality
 
