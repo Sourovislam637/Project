@@ -760,6 +760,10 @@ async def set_commands(client):
                 'Search Dramas on MyDramaList.com and fetch details',
             ),
             BotCommand(
+                BotCommands.PosterCommand,
+                'Search Movie/TV Show Poster via TMDB',
+            ),
+            BotCommand(
                 BotCommands.SpeedCommand[0],
                 f'or /{BotCommands.SpeedCommand[1]} Check Server Up & Down Speed & Details',
             ),
