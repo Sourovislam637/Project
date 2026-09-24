@@ -302,7 +302,18 @@ async def update_all_messages(force=False):
         return
     async with status_reply_dict_lock:
         for chat_id in list(status_reply_dict.keys()):
-            if status_reply_dict[chat_id] and msg != status_reply_dict[chat_id][0].text:
+            # status_reply_dict[chat_id] is always a truthy 2-item list
+            # ([message_or_None, timestamp]) even when the message itself is
+            # None (e.g. sendStatusMessage failed to deliver it) - checking
+            # the list's truthiness never catches that case. Left unfixed,
+            # this raised AttributeError on .text below and aborted the
+            # whole loop, silently breaking status updates for *every other*
+            # chat too (not just this one), which is why a cancelled task
+            # could keep showing indefinitely.
+            if status_reply_dict[chat_id][0] is None:
+                del status_reply_dict[chat_id]
+                continue
+            if msg != status_reply_dict[chat_id][0].text:
                 rmsg = await editMessage(status_reply_dict[chat_id][0], msg, buttons, 'IMAGES')
                 if isinstance(rmsg, str) and rmsg.startswith('Telegram says: [400'):
                     del status_reply_dict[chat_id]
@@ -320,7 +331,8 @@ async def sendStatusMessage(msg):
         chat_id = msg.chat.id
         if chat_id in list(status_reply_dict.keys()):
             message = status_reply_dict[chat_id][0]
-            await deleteMessage(message)
+            if message is not None:
+                await deleteMessage(message)
             del status_reply_dict[chat_id]
         if message := await sendMessage(msg, progress, buttons, photo='IMAGES'):
             if hasattr(message, 'caption'):
