@@ -217,7 +217,11 @@ if len(EXCEP_CHATS) == 0:
 
 def wztgClient(*args, **kwargs):
     if 'max_concurrent_transmissions' in signature(tgClient.__init__).parameters:
-        kwargs['max_concurrent_transmissions'] = 1000
+        # 1000 concurrent transmissions each hold their own MTProto
+        # connection/buffers - wildly oversized for a low-RAM (e.g. 512MB
+        # Heroku) deployment and a likely contributor to memory crashes.
+        # A small number is plenty even for several simultaneous leeches.
+        kwargs['max_concurrent_transmissions'] = 4
     return tgClient(*args, **kwargs)
 
 # --- Add this block to ensure an event loop exists ---
@@ -865,7 +869,10 @@ else:
     qb_client.app_set_preferences(qb_opt)
 
 log_info("Creating client from BOT_TOKEN")
-bot = wztgClient('bot', TELEGRAM_API, TELEGRAM_HASH, bot_token=BOT_TOKEN, workers=1000,
+# workers=1000 update-handling workers is far more than a personal/small-scale
+# bot needs and adds real memory overhead - lowered for low-RAM hosts
+# (e.g. a 512MB Heroku dyno). 50 comfortably handles many simultaneous users.
+bot = wztgClient('bot', TELEGRAM_API, TELEGRAM_HASH, bot_token=BOT_TOKEN, workers=50,
                parse_mode=enums.ParseMode.HTML).start()
 bot_loop = bot.loop
 
