@@ -6,13 +6,12 @@ class KPSMLStyle:
     ST_BN1_URL = 'https://t.me/Rare_Leech_Mirror_Hub'
     ST_BN2_NAME = 'ᴜᴘᴅᴀᴛᴇ ᴄʜᴀɴɴᴇʟ'
     ST_BN2_URL = 'https://t.me/Rare_Bots_Hub'
-    ST_MSG = '''⌬ <b><i>Welcome!</i></b>
+    ST_MSG = '''ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ʀᴇɴᴀᴍᴇ ʙᴏᴛ!
 
-➲ <b>Leech</b> your files, links &amp; torrents straight to Telegram - fast, and in your own custom filename format.
-➲ <b>Auto Rename</b> handles Anime/Movie/Series naming for you automatically - clean names, every time.
-➲ <spoiler>Mirror to Google Drive / Rclone cloud / DDL servers is also supported.</spoiler>
+sᴇɴᴅ ᴀɴʏ ᴠɪᴅᴇᴏ, ᴅᴏᴄᴜᴍᴇɴᴛ ᴏʀ ᴍᴇᴅɪᴀ ғɪʟᴇ, ᴛʜᴇɴ ᴊᴜsᴛ ᴛʏᴘᴇ ᴛʜᴇ ɴᴇᴡ ɴᴀᴍᴇ ᴀɴᴅ sᴇɴᴅ ɪᴛ.
+ᴛʜᴇ ʙᴏᴛ ᴡɪʟʟ ʀᴇɴᴀᴍᴇ ᴀɴᴅ sᴇɴᴅ ɪᴛ ʙᴀᴄᴋ ǫᴜɪᴄᴋʟʏ - sɪᴍᴘʟᴇ, ғᴀsᴛ ᴀɴᴅ ᴇᴀsʏ.
 
-Type {help_command} to see everything I can do.'''
+ᴛʏᴘᴇ {help_command} ᴛᴏ sᴇᴇ ᴀʟʟ ᴄᴏᴍᴍᴀɴᴅs.'''
     ST_BOTPM = '''<i>Now, This bot will send all your files and links here. Start Using ...</i>'''
     ST_UNAUTH = '''<i>You Are not authorized user! Deploy your own Rare Mirror-Leech bot</i>'''
     OWN_TOKEN_GENERATE = '''<b>Temporary Token is not yours!</b>\n\n<i>Kindly generate your own.</i>'''
