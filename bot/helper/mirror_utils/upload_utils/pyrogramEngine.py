@@ -20,7 +20,7 @@ from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.message_utils import sendCustomMsg, editReplyMarkup, sendMultiMessage, chat_info, deleteMessage, get_tg_link_content
 from bot.helper.ext_utils.fs_utils import clean_unwanted, is_archive, get_base_name
 from bot.helper.ext_utils.bot_utils import get_readable_file_size, is_telegram_link, is_url, sync_to_async, download_image_url
-from bot.helper.ext_utils.leech_utils import get_audio_thumb, get_media_info, get_document_type, take_ss, get_ss, get_mediainfo_link, format_filename, remux_container
+from bot.helper.ext_utils.leech_utils import get_audio_thumb, get_media_info, get_document_type, take_ss, get_ss, get_mediainfo_link, format_filename, remux_container, ensure_streamable
 
 LOGGER = getLogger(__name__)
 getLogger("pyrogram").setLevel(ERROR)
@@ -419,6 +419,14 @@ class TgUploader:
         self.__is_corrupted = False
         try:
             is_video, is_audio, is_image = await get_document_type(self.__up_path)
+
+            if is_video:
+                # Re-mux (fast, no re-encode) so the video starts playing on
+                # Telegram immediately instead of buffering first - see
+                # ensure_streamable's docstring. Runs regardless of whether
+                # Auto Rename touched the name/extension, and regardless of
+                # whether this ends up sent as a video or a document.
+                self.__up_path = await ensure_streamable(self.__up_path)
 
             if self.__leech_utils['thumb']:
                 thumb = await self.get_custom_thumb(self.__leech_utils['thumb'])
