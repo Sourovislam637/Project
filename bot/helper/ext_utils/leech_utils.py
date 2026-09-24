@@ -4,7 +4,7 @@ from re import IGNORECASE, sub as re_sub, search as re_search
 from shlex import split as ssplit
 from natsort import natsorted
 from os import path as ospath
-from aiofiles.os import remove as aioremove, path as aiopath, mkdir, makedirs, listdir
+from aiofiles.os import remove as aioremove, path as aiopath, mkdir, makedirs, listdir, rename as aiorename
 from aioshutil import rmtree as aiormtree
 from contextlib import suppress
 from asyncio import create_subprocess_exec, create_task, gather, Semaphore
@@ -41,8 +41,11 @@ async def remux_container(inp_path, out_path):
            '-i', inp_path, '-map', '0', '-c', 'copy']
     if out_ext == '.mp4':
         # The MP4 container can't hold many subtitle codecs directly (e.g.
-        # ASS/SRT), so text subtitles are converted to mov_text.
-        cmd += ['-c:s', 'mov_text']
+        # ASS/SRT), so text subtitles are converted to mov_text. faststart
+        # moves the moov atom (the file's index) to the front, so Telegram
+        # (and other players) can start streaming immediately instead of
+        # having to fetch/seek to the end of the file first.
+        cmd += ['-c:s', 'mov_text', '-movflags', '+faststart']
     cmd.append(out_path)
 
     proc = await create_subprocess_exec(*cmd, stderr=PIPE)
@@ -60,7 +63,8 @@ async def remux_container(inp_path, out_path):
         # drop it and retry with just video + audio, so at least a file with
         # working video/audio is produced.
         cmd2 = [bot_cache['pkgs'][2], '-hide_banner', '-loglevel', 'error',
-                '-i', inp_path, '-map', '0:v', '-map', '0:a?', '-c', 'copy', out_path]
+                '-i', inp_path, '-map', '0:v', '-map', '0:a?', '-c', 'copy',
+                '-movflags', '+faststart', out_path]
         proc2 = await create_subprocess_exec(*cmd2, stderr=PIPE)
         code2 = await proc2.wait()
         if code2 == 0 and await aiopath.exists(out_path):
@@ -71,6 +75,39 @@ async def remux_container(inp_path, out_path):
             await aioremove(out_path)
 
     return False
+
+
+async def ensure_streamable(path):
+    """
+    Re-muxes a video (stream copy, no re-encoding - fast and lossless) so it
+    starts playing on Telegram immediately instead of buffering/lagging
+    before playback begins. For MP4/MOV specifically, the source file's
+    `moov` atom (its index: duration, codecs, keyframes) may sit at the very
+    END of the file, forcing players (including Telegram's own) to fetch or
+    seek through most of the file before they can start - "faststart"
+    rewrites the container with that index moved to the front instead.
+    MKV/WebM don't have this exact issue, but a clean remux still tends to
+    produce a more standards-compliant seek index.
+
+    This runs on every video before upload, regardless of whether Auto
+    Rename changed its name/extension. Failure here is never fatal - if the
+    remux doesn't work for any reason, the original file just gets uploaded
+    as-is, exactly as before this existed.
+    """
+    ext = ospath.splitext(path)[1].lower()
+    if ext not in ('.mp4', '.mov', '.m4v', '.mkv', '.webm'):
+        return path
+
+    tmp_path = f"{path}.streamable{ext}"
+    with suppress(Exception):
+        if await remux_container(path, tmp_path):
+            await aioremove(path)
+            await aiorename(tmp_path, path)
+            return path
+    with suppress(Exception):
+        if await aiopath.exists(tmp_path):
+            await aioremove(tmp_path)
+    return path
 
 
 async def is_multi_streams(path):
