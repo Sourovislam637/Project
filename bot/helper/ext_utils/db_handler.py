@@ -41,11 +41,18 @@ class DbManger:
             async for row in rows:
                 uid = row['_id']
                 del row['_id']
-                thumb_path = f'thumbnails/{uid}.jpg'
+                # NOTE: must be capital "Thumbnails" to match the path used
+                # everywhere else (users_settings.py, pyrogramEngine.py) -
+                # a lowercase mismatch here meant that after every restart
+                # (which wipes Heroku's ephemeral disk), the thumbnail got
+                # restored from the DB into the wrong folder and the upload
+                # code could never find it again, making it look like the
+                # user's thumbnail had been "reset".
+                thumb_path = f'Thumbnails/{uid}.jpg'
                 rclone_path = f'wcl/{uid}.conf'
                 if row.get('thumb'):
-                    if not await aiopath.exists('thumbnails'):
-                        await makedirs('thumbnails')
+                    if not await aiopath.exists('Thumbnails'):
+                        await makedirs('Thumbnails')
                     async with aiopen(thumb_path, 'wb+') as f:
                         await f.write(row['thumb'])
                     row['thumb'] = thumb_path
