@@ -314,7 +314,16 @@ async def update_all_messages(force=False):
                 del status_reply_dict[chat_id]
                 continue
             if msg != status_reply_dict[chat_id][0].text:
-                rmsg = await editMessage(status_reply_dict[chat_id][0], msg, buttons, 'IMAGES')
+                # Only the text/caption needs to change on a periodic status
+                # tick - the photo was already set once when the status
+                # message was first created (sendStatusMessage). Passing
+                # 'IMAGES' here made every single refresh (every few seconds,
+                # per active task) swap in a brand new random photo via
+                # edit_media, which is a much heavier Telegram API call than
+                # a plain caption edit and made status updates far more
+                # likely to hit FloodWait or fall behind/freeze, especially
+                # with several tasks running across multiple chats.
+                rmsg = await editMessage(status_reply_dict[chat_id][0], msg, buttons)
                 if isinstance(rmsg, str) and rmsg.startswith('Telegram says: [400'):
                     del status_reply_dict[chat_id]
                     continue
