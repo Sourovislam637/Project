@@ -6,11 +6,12 @@ from asyncio import create_subprocess_exec
 from asyncio.subprocess import PIPE
 from bot import LOGGER, bot_cache
 from bot.helper.ext_utils.fs_utils import clean_target
+from bot.helper.ext_utils.subtitle_utils import create_subtitle_file
 
 LOGGER = logging.getLogger(__name__)
 
 ########-------- Metadata -------------#########
-async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = ''):
+async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = '', intro_settings: dict = None):
     file_name = os_path.basename(media_file)
     basename = os_path.splitext(file_name)[0]
     basenameX = re_sub(r'www\S+', '', basename)
@@ -20,7 +21,20 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
     if file_ext not in ('.mkv', '.mp4'):
         return
 
-    cmd = [bot_cache['pkgs'][2], '-i', media_file, '-map', '0']
+    # Intro Subtitle: a short softsub (a real, selectable subtitle track,
+    # not burned into the video) showing the user's own text for the first
+    # few seconds. Built as a second FFmpeg input and mapped in alongside
+    # the main file below.
+    srt_file = None
+    if intro_settings and intro_settings.get('text') and intro_settings.get('enabled', True):
+        srt_file = create_subtitle_file(intro_settings, media_file)
+
+    cmd = [bot_cache['pkgs'][2], '-i', media_file]
+    if srt_file:
+        cmd.extend(['-i', srt_file])
+    cmd.extend(['-map', '0'])
+    if srt_file:
+        cmd.extend(['-map', '1:0'])
 
     # Multi-metadata parsing engine
     meta_dict = {}
@@ -98,7 +112,15 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
             '-metadata:s:s', f'title={metadata or title_metadata}'
         ])
 
-    cmd.extend(['-c', 'copy', outfile])
+    cmd.extend(['-c', 'copy'])
+    if srt_file:
+        # MP4 can't hold a raw "subrip" stream directly (needs mov_text);
+        # MKV takes srt as-is. This is a stream-specific override (-c:s),
+        # so it always wins over the blanket -c copy above for just the
+        # subtitle stream, regardless of argument order.
+        sub_codec = 'srt' if file_ext == '.mkv' else 'mov_text'
+        cmd.extend(['-c:s', sub_codec, '-disposition:s:0', 'default'])
+    cmd.append(outfile)
   
     listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
     code = await listener.suproc.wait()
@@ -110,6 +132,8 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
     else:
         await clean_target(outfile)
         LOGGER.error('%s. Changing metadata failed, Path %s', await listener.suproc.stderr.read().decode(), media_file)
+    if srt_file:
+        await clean_target(srt_file)
 
 
 ########-------- Attachment -------------#########
