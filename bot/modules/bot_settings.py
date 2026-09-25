@@ -872,6 +872,15 @@ async def edit_variable(_, message, pre_message, key):
             if x.strip().startswith('.'):
                 x = x.lstrip('.')
             GLOBAL_EXTENSION_FILTER.append(x.strip().lower())
+    elif key == 'IMAGES':
+        # Must end up as a list of URLs, same parsing as the startup value in
+        # bot/__init__.py - the generic fallback below just stores the raw
+        # text as one string, and random.choice() on a plain string picks a
+        # random *character* (sometimes a newline between URLs), which then
+        # fails to send as a photo on essentially every other status/start
+        # message. Splitting on whitespace also drops blank lines for free.
+        value = (value.replace("'", '').replace('"', '').replace(
+            '[', '').replace(']', '').replace(",", "")).split()
     elif key == 'GDRIVE_ID':
         list_drives_dict['Main'] = {"drive_id": value, "index_link": config_dict['INDEX_URL']}
         categories_dict['Root'] = {"drive_id": value, "index_link": config_dict['INDEX_URL']}
