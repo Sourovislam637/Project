@@ -25,6 +25,7 @@ from bot.helper.ext_utils.bot_utils import getdailytasks, update_user_ldata, get
 from bot.helper.mirror_utils.upload_utils.ddlserver.gofile import Gofile
 from bot.helper.themes import BotTheme
 from bot.modules.autorename import validate_autorename_format
+from bot.helper.ext_utils.subtitle_utils import COLOR_OPTIONS, validate_and_escape_subtitle_text
 
 def trun(text, limit=60):
     text = str(text)
@@ -203,6 +204,11 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         metadata = 'Not Exists' if (val:=user_dict.get('metadata', config_dict.get('METADATA', ''))) == '' else val
         buttons.ibutton(f"{'✅️' if metadata != 'Not Exists' else ''} Leech Metadata", f"userset {user_id} metadata")
 
+        intro_subtitle = user_dict.get('intro_subtitle', {})
+        has_intro = intro_subtitle.get('text', '') != ''
+        intro_enabled = intro_subtitle.get('enabled', True) if has_intro else False
+        buttons.ibutton(f"{'✅️' if has_intro and intro_enabled else '❌' if has_intro else ''} 📝 Intro Sub", f"userset {user_id} intro_subtitle")
+
         text = BotTheme('LEECH', NAME=name, DL=f"{dailyll} / {dailytlle}",
                 LTYPE=ltype, THUMB=thumbmsg, SPLIT_SIZE=split_size,
                 EQUAL_SPLIT=equal_splits, MEDIA_GROUP=media_group,
@@ -232,6 +238,33 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             
         buttons.ibutton("✨ Set All Metadata", f"userset {user_id} md_set_all", "header")
         buttons.ibutton("↻ Clear All", f"userset {user_id} md_clear_all", "header")
+        buttons.ibutton("Back", f"userset {user_id} back leech", "footer")
+        buttons.ibutton("Close", f"userset {user_id} close", "footer")
+        button = buttons.build_menu(2)
+    elif key == 'intro_subtitle':
+        intro_settings = user_dict.get('intro_subtitle', {})
+        text = intro_settings.get('text', '')
+        color = intro_settings.get('color', 'white')
+        duration = intro_settings.get('duration', 5)
+        is_enabled = intro_settings.get('enabled', True)
+
+        text_disp = 'Not Exists' if not text else trun(text, 50)
+        text_line = f"➲ <b>Text :</b> <code>{escape(text_disp)}</code>\n"
+        status_line = f"➲ <b>Status :</b> <i>{'Enabled' if is_enabled else 'Disabled'}</i>\n" if text else ""
+        msg = "㊂ <b><u>Intro Subtitle Settings :</u></b>\n\n"
+        msg += text_line + status_line
+        msg += f"➲ <b>Color :</b> {COLOR_OPTIONS.get(color, color)}\n"
+        msg += f"➲ <b>Duration :</b> {duration} seconds\n\n"
+        msg += "➲ <b>Description :</b> <i>Adds a short, real subtitle track (not burned into the video) showing your own text for the first few seconds of each leeched video.</i>"
+
+        if text:
+            buttons.ibutton('Disable' if is_enabled else 'Enable', f"userset {user_id} intro_toggle", "header")
+        buttons.ibutton('Set Text', f"userset {user_id} intro_text")
+        buttons.ibutton('Set Color', f"userset {user_id} intro_color")
+        buttons.ibutton('Set Duration', f"userset {user_id} intro_duration")
+        if text:
+            buttons.ibutton('↻ Reset', f"userset {user_id} intro_reset")
+
         buttons.ibutton("Back", f"userset {user_id} back leech", "footer")
         buttons.ibutton("Close", f"userset {user_id} close", "footer")
         button = buttons.build_menu(2)
@@ -532,6 +565,49 @@ async def set_all_metadata(client, message, pre_event):
     if DATABASE_URL:
         await DbManger().update_user_data(user_id)
 
+async def set_intro_text(client, message, pre_event):
+    user_id = message.from_user.id
+    handler_dict[user_id] = False
+    success, text, error = validate_and_escape_subtitle_text(message.text or "")
+    if not success:
+        err_msg = await sendMessage(message, f"⚠️ {error}")
+        await deleteMessage(message)
+        await sleep(4)
+        await deleteMessage(err_msg)
+        await update_user_settings(pre_event, 'intro_subtitle')
+        return
+
+    intro_settings = user_data.get(user_id, {}).get('intro_subtitle', {})
+    intro_settings['text'] = text
+    intro_settings.setdefault('color', 'white')
+    intro_settings.setdefault('duration', 5)
+    intro_settings.setdefault('enabled', True)
+    update_user_ldata(user_id, 'intro_subtitle', intro_settings)
+    await deleteMessage(message)
+    await update_user_settings(pre_event, 'intro_subtitle')
+    if DATABASE_URL:
+        await DbManger().update_user_data(user_id)
+
+async def set_intro_duration(client, message, pre_event):
+    user_id = message.from_user.id
+    handler_dict[user_id] = False
+    value = (message.text or "").strip()
+    if not value.isdigit() or not (1 <= int(value) <= 30):
+        err_msg = await sendMessage(message, "⚠️ Duration must be a number between 1-30 seconds!")
+        await deleteMessage(message)
+        await sleep(4)
+        await deleteMessage(err_msg)
+        await update_user_settings(pre_event, 'intro_subtitle')
+        return
+
+    intro_settings = user_data.get(user_id, {}).get('intro_subtitle', {})
+    intro_settings['duration'] = int(value)
+    update_user_ldata(user_id, 'intro_subtitle', intro_settings)
+    await deleteMessage(message)
+    await update_user_settings(pre_event, 'intro_subtitle')
+    if DATABASE_URL:
+        await DbManger().update_user_data(user_id)
+
 async def set_thumb(client, message, pre_event, key, direct=False):
     user_id = message.from_user.id
     handler_dict[user_id] = False
@@ -813,6 +889,58 @@ async def edit_user_settings(client, query):
         update_user_ldata(user_id, 'metadata', '')
         await query.answer("Cleared all custom metadata values!", show_alert=True)
         await update_user_settings(query, 'metadata_menu')
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+    elif data[2] == 'intro_subtitle':
+        await query.answer()
+        await update_user_settings(query, 'intro_subtitle')
+    elif data[2] == 'intro_text':
+        await query.answer()
+        text = "⚙️ <b><u>Set Intro Subtitle Text</u></b>\n\nSend the text you want to show at the start of your leeched videos (max 200 characters).\n\n<b>Timeout:</b> 60 sec"
+        buttons = ButtonMaker()
+        buttons.ibutton("Cancel / Back", f"userset {user_id} intro_subtitle")
+        await editMessage(message, text, buttons.build_menu(1))
+        pfunc = partial(set_intro_text, pre_event=query)
+        rfunc = partial(update_user_settings, query, 'intro_subtitle')
+        await event_handler(client, query, pfunc, rfunc)
+    elif data[2] == 'intro_duration':
+        await query.answer()
+        text = "⚙️ <b><u>Set Intro Subtitle Duration</u></b>\n\nSend how many seconds the subtitle should show for (1-30).\n\n<b>Timeout:</b> 60 sec"
+        buttons = ButtonMaker()
+        buttons.ibutton("Cancel / Back", f"userset {user_id} intro_subtitle")
+        await editMessage(message, text, buttons.build_menu(1))
+        pfunc = partial(set_intro_duration, pre_event=query)
+        rfunc = partial(update_user_settings, query, 'intro_subtitle')
+        await event_handler(client, query, pfunc, rfunc)
+    elif data[2] == 'intro_color':
+        await query.answer()
+        buttons = ButtonMaker()
+        for color_key, color_name in COLOR_OPTIONS.items():
+            buttons.ibutton(color_name, f"userset {user_id} intro_setcolor^{color_key}")
+        buttons.ibutton("Back", f"userset {user_id} intro_subtitle", "footer")
+        await editMessage(message, "<b>Select Text Color:</b>", buttons.build_menu(2))
+    elif data[2].startswith('intro_setcolor'):
+        color = data[2].split("^")[1]
+        intro_settings = user_dict.get('intro_subtitle', {})
+        intro_settings['color'] = color
+        update_user_ldata(user_id, 'intro_subtitle', intro_settings)
+        await query.answer(f"Color set to {color}!")
+        await update_user_settings(query, 'intro_subtitle')
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+    elif data[2] == 'intro_toggle':
+        intro_settings = user_dict.get('intro_subtitle', {})
+        current = intro_settings.get('enabled', True)
+        intro_settings['enabled'] = not current
+        update_user_ldata(user_id, 'intro_subtitle', intro_settings)
+        await query.answer(f"Intro Subtitle {'enabled' if not current else 'disabled'}!")
+        await update_user_settings(query, 'intro_subtitle')
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+    elif data[2] == 'intro_reset':
+        update_user_ldata(user_id, 'intro_subtitle', {})
+        await query.answer("Intro Subtitle settings reset!", show_alert=True)
+        await update_user_settings(query, 'intro_subtitle')
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
     elif data[2] in ['lprefix', 'lsuffix', 'lremname', 'lcaption', 'ldump', 'mprefix', 'msuffix', 'mremname', 'lattachment', 'autorename_format', 'custom_title']:
