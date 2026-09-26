@@ -902,11 +902,17 @@ def _patch_pyrogram_listener_future_bug():
     `await self.original_callback(...)` while self.original_callback is
     actually an asyncio.Future (used by pyrofork's own listen()/ask()
     machinery), not our registered callback function. That raises
-    "TypeError: object Future can't be used in 'await' expression" and,
-    left unpatched, means our own handler never runs at all - making a
-    button (Confirm/Select Files/Intro Sub/etc.) look completely dead. When
-    this happens, this patch calls our real handler directly instead of
-    just dropping the update, so the button still works.
+    "TypeError: object Future can't be used in 'await' expression".
+
+    This just logs and drops the update instead of crashing. An earlier
+    version of this patch tried to be "helpful" by calling our real handler
+    directly when this happened - but there's no way to know from here
+    whether pyrofork's own internal resolve logic already ran (part of) our
+    handler before hitting this error, so that risked *double-invoking*
+    state-changing handlers (toggle buttons flipping on then straight back
+    off, settings getting reset right after being set, etc.) - a correctness
+    bug that's worse than the button occasionally needing a retry. Dropping
+    the update safely (as before) is the right tradeoff here.
 
     This must run before any of our modules register their handlers
     (bot/modules/*.py), since it patches the class - handlers created after
@@ -940,16 +946,7 @@ def _patch_pyrogram_listener_future_bug():
                 await _orig(self, client, update, *args)
             except TypeError as e:
                 if "Future" in str(e):
-                    # pyrofork's own resolve logic got confused by some
-                    # unrelated stale internal state and never called our
-                    # real handler at all - that's what made the button
-                    # look completely dead instead of just slow. Since we
-                    # already have the real handler (self.original_callback)
-                    # right here, call it directly ourselves instead of
-                    # just logging and dropping the update.
-                    LOGGER.warning(f"pyrofork Future/callback dispatch bug hit - invoking handler directly instead of dropping the update: {e}")
-                    if callable(cb):
-                        await cb(client, update, *args)
+                    LOGGER.warning(f"Swallowed pyrofork Future/callback dispatch bug (dropped this update - please retry): {e}")
                 else:
                     raise
 
