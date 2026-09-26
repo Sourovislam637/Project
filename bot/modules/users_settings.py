@@ -207,7 +207,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         intro_subtitle = user_dict.get('intro_subtitle', {})
         has_intro = intro_subtitle.get('text', '') != ''
         intro_enabled = intro_subtitle.get('enabled', True) if has_intro else False
-        buttons.ibutton(f"{'✅️' if has_intro and intro_enabled else '❌' if has_intro else ''} Intro Sub", f"userset {user_id} intro_subtitle")
+        buttons.ibutton(f"{'✅️' if has_intro and intro_enabled else ''} Intro Sub", f"userset {user_id} intro_subtitle")
 
         text = BotTheme('LEECH', NAME=name, DL=f"{dailyll} / {dailytlle}",
                 LTYPE=ltype, THUMB=thumbmsg, SPLIT_SIZE=split_size,
@@ -243,32 +243,32 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         button = buttons.build_menu(2)
     elif key == 'intro_subtitle':
         intro_settings = user_dict.get('intro_subtitle', {})
-        text = intro_settings.get('text', '')
+        intro_text = intro_settings.get('text', '')
         color = intro_settings.get('color', 'white')
         bg_color = intro_settings.get('bg_color', 'none')
         duration = intro_settings.get('duration', 5)
         font_size = intro_settings.get('font_size', 24)
         is_enabled = intro_settings.get('enabled', True)
 
-        text_disp = 'Not Exists' if not text else trun(text, 50)
+        text_disp = 'Not Exists' if not intro_text else trun(intro_text, 50)
         text_line = f"➲ <b>Text :</b> <code>{escape(text_disp)}</code>\n"
-        status_line = f"➲ <b>Status :</b> <i>{'Enabled' if is_enabled else 'Disabled'}</i>\n" if text else ""
-        msg = "㊂ <b><u>Intro Subtitle Settings :</u></b>\n\n"
-        msg += text_line + status_line
-        msg += f"➲ <b>Color :</b> {COLOR_OPTIONS.get(color, color)}\n"
-        msg += f"➲ <b>Background :</b> {BG_COLOR_OPTIONS.get(bg_color, bg_color)}\n"
-        msg += f"➲ <b>Font Size :</b> {font_size}\n"
-        msg += f"➲ <b>Duration :</b> {duration} seconds\n\n"
-        msg += "➲ <b>Description :</b> <i>Adds a short, real subtitle track (not burned into the video) showing your own text for the first few seconds of each leeched video - set as the default track, so most players turn it on automatically. Color/Background/Font Size only take visible effect on .mkv files (.mp4 can only carry plain text, a hard limit of the format itself).</i>"
+        status_line = f"➲ <b>Status :</b> <i>{'Enabled' if is_enabled else 'Disabled'}</i>\n" if intro_text else ""
+        text = "㊂ <b><u>Intro Subtitle Settings :</u></b>\n\n"
+        text += text_line + status_line
+        text += f"➲ <b>Color :</b> {COLOR_OPTIONS.get(color, color)}\n"
+        text += f"➲ <b>Background :</b> {BG_COLOR_OPTIONS.get(bg_color, bg_color)}\n"
+        text += f"➲ <b>Font Size :</b> {font_size}\n"
+        text += f"➲ <b>Duration :</b> {duration} seconds\n\n"
+        text += "➲ <b>Description :</b> <i>Adds a short, real subtitle track (not burned into the video) showing your own text for the first few seconds of each leeched video - set as the default track, so most players turn it on automatically. Color/Background/Font Size only take visible effect on .mkv files (.mp4 can only carry plain text, a hard limit of the format itself).</i>"
 
-        if text:
+        if intro_text:
             buttons.ibutton('Disable' if is_enabled else 'Enable', f"userset {user_id} intro_toggle", "header")
         buttons.ibutton('Set Text', f"userset {user_id} intro_text")
         buttons.ibutton('Set Color', f"userset {user_id} intro_color")
         buttons.ibutton('Set Background', f"userset {user_id} intro_bgcolor")
         buttons.ibutton('Set Font Size', f"userset {user_id} intro_fontsize")
         buttons.ibutton('Set Duration', f"userset {user_id} intro_duration")
-        if text:
+        if intro_text:
             buttons.ibutton('↻ Reset', f"userset {user_id} intro_reset")
 
         buttons.ibutton("Back", f"userset {user_id} back leech", "footer")
