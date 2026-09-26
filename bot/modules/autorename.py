@@ -239,7 +239,7 @@ async def get_autorename(filename, user_id, size="", media_quality="", lang="", 
         # format, that's kept; otherwise the original file's extension is used.
         final_name = new_name if has_custom_ext else f"{new_name}{ext}"
 
-        LOGGER.info(f"Auto Renamed: {filename} -> {final_name}")
+        LOGGER.debug(f"Auto Renamed: {filename} -> {final_name}")
         return final_name
     
     except KeyError as e:
