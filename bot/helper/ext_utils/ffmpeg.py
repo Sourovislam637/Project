@@ -23,18 +23,28 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
 
     # Intro Subtitle: a short softsub (a real, selectable subtitle track,
     # not burned into the video) showing the user's own text for the first
-    # few seconds. Built as a second FFmpeg input and mapped in alongside
-    # the main file below.
-    srt_file = None
+    # few seconds, set as the default track. Built as a second FFmpeg input
+    # mapped in *before* the main file's own streams, so it always lands at
+    # subtitle index s:0 - that's what makes "-disposition:s:0 default"
+    # below reliably target the new subtitle rather than any subtitle
+    # track the source file might already have.
+    intro_sub_file, intro_sub_fmt = None, None
     if intro_settings and intro_settings.get('text') and intro_settings.get('enabled', True):
-        srt_file = create_subtitle_file(intro_settings, media_file)
+        intro_sub_file, intro_sub_fmt = create_subtitle_file(intro_settings, media_file, file_ext)
 
-    cmd = [bot_cache['pkgs'][2], '-i', media_file]
-    if srt_file:
-        cmd.extend(['-i', srt_file])
-    cmd.extend(['-map', '0'])
-    if srt_file:
-        cmd.extend(['-map', '1:0'])
+    cmd = [bot_cache['pkgs'][2]]
+    if intro_sub_file:
+        cmd.extend(['-i', intro_sub_file])   # input 0: the new intro subtitle
+    cmd.extend(['-i', media_file])           # input 0 (no intro sub) or input 1
+
+    if intro_sub_file:
+        # Map the new subtitle FIRST, before the main file's own streams -
+        # this is what guarantees it lands at subtitle index s:0 (see the
+        # comment above), regardless of whether the source already has its
+        # own subtitle track(s).
+        cmd.extend(['-map', '0:0', '-map', '1'])
+    else:
+        cmd.extend(['-map', '0'])
 
     # Multi-metadata parsing engine
     meta_dict = {}
@@ -113,13 +123,18 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
         ])
 
     cmd.extend(['-c', 'copy'])
-    if srt_file:
-        # MP4 can't hold a raw "subrip" stream directly (needs mov_text);
-        # MKV takes srt as-is. This is a stream-specific override (-c:s),
-        # so it always wins over the blanket -c copy above for just the
-        # subtitle stream, regardless of argument order.
-        sub_codec = 'srt' if file_ext == '.mkv' else 'mov_text'
-        cmd.extend(['-c:s', sub_codec, '-disposition:s:0', 'default'])
+    if intro_sub_file:
+        # This targets ONLY the new subtitle stream (s:0, guaranteed by the
+        # map order above) - any subtitle track(s) the source file already
+        # had keep their original codec via the blanket -c copy, instead of
+        # also being forced through this conversion.
+        if intro_sub_fmt == 'ass':
+            # MKV carries ASS as-is; no conversion needed.
+            cmd.extend(['-c:s:0', 'copy'])
+        else:
+            # MP4 can't hold a raw "subrip" stream - convert to mov_text.
+            cmd.extend(['-c:s:0', 'mov_text'])
+        cmd.extend(['-disposition:s:0', 'default'])
     cmd.append(outfile)
   
     listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
@@ -132,8 +147,8 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
     else:
         await clean_target(outfile)
         LOGGER.error('%s. Changing metadata failed, Path %s', await listener.suproc.stderr.read().decode(), media_file)
-    if srt_file:
-        await clean_target(srt_file)
+    if intro_sub_file:
+        await clean_target(intro_sub_file)
 
 
 ########-------- Attachment -------------#########
