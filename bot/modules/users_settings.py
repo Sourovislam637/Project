@@ -25,7 +25,7 @@ from bot.helper.ext_utils.bot_utils import getdailytasks, update_user_ldata, get
 from bot.helper.mirror_utils.upload_utils.ddlserver.gofile import Gofile
 from bot.helper.themes import BotTheme
 from bot.modules.autorename import validate_autorename_format
-from bot.helper.ext_utils.subtitle_utils import COLOR_OPTIONS, validate_and_escape_subtitle_text
+from bot.helper.ext_utils.subtitle_utils import COLOR_OPTIONS, BG_COLOR_OPTIONS, validate_and_escape_subtitle_text
 
 def trun(text, limit=60):
     text = str(text)
@@ -207,7 +207,7 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         intro_subtitle = user_dict.get('intro_subtitle', {})
         has_intro = intro_subtitle.get('text', '') != ''
         intro_enabled = intro_subtitle.get('enabled', True) if has_intro else False
-        buttons.ibutton(f"{'✅️' if has_intro and intro_enabled else '❌' if has_intro else ''} 📝 Intro Sub", f"userset {user_id} intro_subtitle")
+        buttons.ibutton(f"{'✅️' if has_intro and intro_enabled else '❌' if has_intro else ''} Intro Sub", f"userset {user_id} intro_subtitle")
 
         text = BotTheme('LEECH', NAME=name, DL=f"{dailyll} / {dailytlle}",
                 LTYPE=ltype, THUMB=thumbmsg, SPLIT_SIZE=split_size,
@@ -245,7 +245,9 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         intro_settings = user_dict.get('intro_subtitle', {})
         text = intro_settings.get('text', '')
         color = intro_settings.get('color', 'white')
+        bg_color = intro_settings.get('bg_color', 'none')
         duration = intro_settings.get('duration', 5)
+        font_size = intro_settings.get('font_size', 24)
         is_enabled = intro_settings.get('enabled', True)
 
         text_disp = 'Not Exists' if not text else trun(text, 50)
@@ -254,13 +256,17 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
         msg = "㊂ <b><u>Intro Subtitle Settings :</u></b>\n\n"
         msg += text_line + status_line
         msg += f"➲ <b>Color :</b> {COLOR_OPTIONS.get(color, color)}\n"
+        msg += f"➲ <b>Background :</b> {BG_COLOR_OPTIONS.get(bg_color, bg_color)}\n"
+        msg += f"➲ <b>Font Size :</b> {font_size}\n"
         msg += f"➲ <b>Duration :</b> {duration} seconds\n\n"
-        msg += "➲ <b>Description :</b> <i>Adds a short, real subtitle track (not burned into the video) showing your own text for the first few seconds of each leeched video.</i>"
+        msg += "➲ <b>Description :</b> <i>Adds a short, real subtitle track (not burned into the video) showing your own text for the first few seconds of each leeched video - set as the default track, so most players turn it on automatically. Color/Background/Font Size only take visible effect on .mkv files (.mp4 can only carry plain text, a hard limit of the format itself).</i>"
 
         if text:
             buttons.ibutton('Disable' if is_enabled else 'Enable', f"userset {user_id} intro_toggle", "header")
         buttons.ibutton('Set Text', f"userset {user_id} intro_text")
         buttons.ibutton('Set Color', f"userset {user_id} intro_color")
+        buttons.ibutton('Set Background', f"userset {user_id} intro_bgcolor")
+        buttons.ibutton('Set Font Size', f"userset {user_id} intro_fontsize")
         buttons.ibutton('Set Duration', f"userset {user_id} intro_duration")
         if text:
             buttons.ibutton('↻ Reset', f"userset {user_id} intro_reset")
@@ -580,6 +586,8 @@ async def set_intro_text(client, message, pre_event):
     intro_settings = user_data.get(user_id, {}).get('intro_subtitle', {})
     intro_settings['text'] = text
     intro_settings.setdefault('color', 'white')
+    intro_settings.setdefault('bg_color', 'none')
+    intro_settings.setdefault('font_size', 24)
     intro_settings.setdefault('duration', 5)
     intro_settings.setdefault('enabled', True)
     update_user_ldata(user_id, 'intro_subtitle', intro_settings)
@@ -602,6 +610,26 @@ async def set_intro_duration(client, message, pre_event):
 
     intro_settings = user_data.get(user_id, {}).get('intro_subtitle', {})
     intro_settings['duration'] = int(value)
+    update_user_ldata(user_id, 'intro_subtitle', intro_settings)
+    await deleteMessage(message)
+    await update_user_settings(pre_event, 'intro_subtitle')
+    if DATABASE_URL:
+        await DbManger().update_user_data(user_id)
+
+async def set_intro_fontsize(client, message, pre_event):
+    user_id = message.from_user.id
+    handler_dict[user_id] = False
+    value = (message.text or "").strip()
+    if not value.isdigit() or not (12 <= int(value) <= 72):
+        err_msg = await sendMessage(message, "⚠️ Font Size must be a number between 12-72!")
+        await deleteMessage(message)
+        await sleep(4)
+        await deleteMessage(err_msg)
+        await update_user_settings(pre_event, 'intro_subtitle')
+        return
+
+    intro_settings = user_data.get(user_id, {}).get('intro_subtitle', {})
+    intro_settings['font_size'] = int(value)
     update_user_ldata(user_id, 'intro_subtitle', intro_settings)
     await deleteMessage(message)
     await update_user_settings(pre_event, 'intro_subtitle')
@@ -896,7 +924,9 @@ async def edit_user_settings(client, query):
         await update_user_settings(query, 'intro_subtitle')
     elif data[2] == 'intro_text':
         await query.answer()
-        text = "⚙️ <b><u>Set Intro Subtitle Text</u></b>\n\nSend the text you want to show at the start of your leeched videos (max 200 characters).\n\n<b>Timeout:</b> 60 sec"
+        text = ("⚙️ <b><u>Set Intro Subtitle Text</u></b>\n\n"
+                "<i>This text appears at the very start of your leeched videos, as a real subtitle track set as default - most players turn it on automatically.</i>\n\n"
+                "<b>Send Intro Text</b>\n<b>Example:</b> <code>Join @MyChannel</code>\n<b>Max Length:</b> 200 characters\n<b>Timeout:</b> 60 sec")
         buttons = ButtonMaker()
         buttons.ibutton("Cancel / Back", f"userset {user_id} intro_subtitle")
         await editMessage(message, text, buttons.build_menu(1))
@@ -905,11 +935,24 @@ async def edit_user_settings(client, query):
         await event_handler(client, query, pfunc, rfunc)
     elif data[2] == 'intro_duration':
         await query.answer()
-        text = "⚙️ <b><u>Set Intro Subtitle Duration</u></b>\n\nSend how many seconds the subtitle should show for (1-30).\n\n<b>Timeout:</b> 60 sec"
+        text = ("⚙️ <b><u>Set Intro Subtitle Duration</u></b>\n\n"
+                "<i>How long (in seconds) the intro subtitle stays visible from the start of the video.</i>\n\n"
+                "<b>Send Duration in seconds</b>\n<b>Example:</b> <code>10</code>\n<b>Range:</b> 1-30\n<b>Timeout:</b> 60 sec")
         buttons = ButtonMaker()
         buttons.ibutton("Cancel / Back", f"userset {user_id} intro_subtitle")
         await editMessage(message, text, buttons.build_menu(1))
         pfunc = partial(set_intro_duration, pre_event=query)
+        rfunc = partial(update_user_settings, query, 'intro_subtitle')
+        await event_handler(client, query, pfunc, rfunc)
+    elif data[2] == 'intro_fontsize':
+        await query.answer()
+        text = ("⚙️ <b><u>Set Intro Subtitle Font Size</u></b>\n\n"
+                "<i>Only takes visible effect on .mkv files - .mp4 can't carry font-size styling (a hard limit of the format itself).</i>\n\n"
+                "<b>Send Font Size</b>\n<b>Example:</b> <code>28</code>\n<b>Range:</b> 12-72\n<b>Timeout:</b> 60 sec")
+        buttons = ButtonMaker()
+        buttons.ibutton("Cancel / Back", f"userset {user_id} intro_subtitle")
+        await editMessage(message, text, buttons.build_menu(1))
+        pfunc = partial(set_intro_fontsize, pre_event=query)
         rfunc = partial(update_user_settings, query, 'intro_subtitle')
         await event_handler(client, query, pfunc, rfunc)
     elif data[2] == 'intro_color':
@@ -925,6 +968,22 @@ async def edit_user_settings(client, query):
         intro_settings['color'] = color
         update_user_ldata(user_id, 'intro_subtitle', intro_settings)
         await query.answer(f"Color set to {color}!")
+        await update_user_settings(query, 'intro_subtitle')
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+    elif data[2] == 'intro_bgcolor':
+        await query.answer()
+        buttons = ButtonMaker()
+        for color_key, color_name in BG_COLOR_OPTIONS.items():
+            buttons.ibutton(color_name, f"userset {user_id} intro_setbgcolor^{color_key}")
+        buttons.ibutton("Back", f"userset {user_id} intro_subtitle", "footer")
+        await editMessage(message, "<b>Select Background Color:</b>\n<i>Only visible on .mkv files.</i>", buttons.build_menu(2))
+    elif data[2].startswith('intro_setbgcolor'):
+        bg_color = data[2].split("^")[1]
+        intro_settings = user_dict.get('intro_subtitle', {})
+        intro_settings['bg_color'] = bg_color
+        update_user_ldata(user_id, 'intro_subtitle', intro_settings)
+        await query.answer(f"Background set to {bg_color}!")
         await update_user_settings(query, 'intro_subtitle')
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
