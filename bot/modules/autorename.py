@@ -24,6 +24,23 @@ def trun(text, limit=60):
 VALID_AUTORENAME_TAGS = {'title', 'season', 'episode',
                           'quality', 'codec', 'audio', 'sub', 'size', 'language'}
 
+# Shared with get_autorename() below and with get_clean_title() (used by
+# Auto Thumbnail) - strips season/episode/quality/codec/audio/sub noise
+# words out of a filename, leaving (roughly) just the title.
+NOISE_PATTERN = r'(S\d{1,2}|E\d{1,3}|Ep\s*\d{1,3}|Episode\s*\d{1,3}|480p|720p|1080p|1440p|2160p|4K|x264|x265|HEVC|AV1|H264|H265|10bit|10Bit|AVC|BluRay|WEB-DL|WEBRip|HDRip|HDTV|Dual[\s\-]?Audio|Multi[\s\-]?Audio|Hindi|English|Tamil|Telugu|Malayalam|Kannada|Bengali|ESub|HC-ENG|MSub|Multi[\s\-]?Sub|Subbed|Audio)'
+
+def get_clean_title(filename):
+    """
+    Strip a filename down to (roughly) just its title, the same way
+    get_autorename() does for the {title} tag - brackets/parens and
+    season/episode/quality/codec/audio/sub noise words removed. Used by
+    Auto Thumbnail to know what to search AniList/TMDB for.
+    """
+    name = os.path.splitext(filename)[0]
+    clean_title = re.sub(r'\[.*?\]|\(.*?\)', '', name)
+    clean_title = re.sub(NOISE_PATTERN, '', clean_title, flags=re.IGNORECASE)
+    return re.sub(r'(\s|-|\.)+', ' ', clean_title).strip()
+
 def validate_autorename_format(format_str):
     """
     Returns any {tag} used in the user's format that isn't supported (e.g. a
@@ -79,6 +96,23 @@ async def resolve_auto_title(search_name):
             LOGGER.error(f"Auto Rename: TMDB title lookup failed for '{search_name}': {e}")
 
     return None
+
+async def get_title_for_thumbnail(filename, caption=""):
+    """
+    Resolve a title to search for Auto Thumbnail - the same pipeline Auto
+    Rename uses for {title}: prefer a "Title: ..." line in the caption if
+    present, otherwise clean the filename, then try AniList (anime) and
+    fall back to TMDB (movie/TV/drama). Returns None if nothing is found,
+    in which case the caller should just skip fetching a thumbnail.
+    """
+    caption_title = None
+    if caption and (m := re.search(r'(?:^|\n)\s*Title\s*[:\-]+\s*(.+)', caption, re.IGNORECASE)):
+        caption_title = m.group(1).strip()
+
+    clean_title = caption_title if caption_title else get_clean_title(filename)
+    if not clean_title:
+        return None
+    return await resolve_auto_title(clean_title) or clean_title
 
 async def get_autorename(filename, user_id, size="", media_quality="", lang="", subs="", caption="", skip=False):
     """
@@ -183,8 +217,7 @@ async def get_autorename(filename, user_id, size="", media_quality="", lang="", 
 
     # Clean the original filename (strip brackets/parentheses and noise words)
     clean_title = caption_title if caption_title else re.sub(r'\[.*?\]|\(.*?\)', '', name)
-    noise_pattern = r'(S\d{1,2}|E\d{1,3}|Ep\s*\d{1,3}|Episode\s*\d{1,3}|480p|720p|1080p|1440p|2160p|4K|x264|x265|HEVC|AV1|H264|H265|10bit|10Bit|AVC|BluRay|WEB-DL|WEBRip|HDRip|HDTV|Dual[\s\-]?Audio|Multi[\s\-]?Audio|Hindi|English|Tamil|Telugu|Malayalam|Kannada|Bengali|ESub|HC-ENG|MSub|Multi[\s\-]?Sub|Subbed|Audio)'
-    clean_title = re.sub(noise_pattern, '', clean_title, flags=re.IGNORECASE)
+    clean_title = re.sub(NOISE_PATTERN, '', clean_title, flags=re.IGNORECASE)
     clean_title = re.sub(r'(\s|-|\.)+', ' ', clean_title).strip() 
 
     # Check the user's Custom Title. If there isn't one and the format uses
