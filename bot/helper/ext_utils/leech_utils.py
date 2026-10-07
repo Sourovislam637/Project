@@ -1,4 +1,5 @@
 from hashlib import md5
+from html import escape
 from time import strftime, gmtime, time
 from re import IGNORECASE, sub as re_sub, search as re_search
 from shlex import split as ssplit
@@ -11,9 +12,12 @@ from asyncio import create_subprocess_exec, create_task, gather, Semaphore
 from asyncio.subprocess import PIPE
 from telegraph import upload_file
 from langcodes import Language
+from urllib.parse import quote_plus
+from PIL import Image
 
 from bot import bot_cache, LOGGER, MAX_SPLIT_SIZE, config_dict, user_data
-from bot.modules.autorename import get_autorename
+from bot.modules.autorename import get_autorename, get_title_for_thumbnail
+from bot.modules.poster import fetch_json
 from bot.modules.mediainfo import parseinfo
 from bot.helper.ext_utils.bot_utils import cmd_exec, sync_to_async, get_readable_file_size, get_readable_time
 from bot.helper.ext_utils.fs_utils import ARCH_EXT, get_mime_type
@@ -200,6 +204,69 @@ async def get_document_type(path):
         elif stream.get('codec_type') == 'audio':
             is_audio = True
     return is_video, is_audio, is_image
+
+
+async def fetch_auto_thumbnail(title):
+    """
+    Auto Thumbnail: given a resolved title, find a landscape (backdrop)
+    image via TMDB - the same "English landscape" images shown under
+    /poster's Landscape button - download it, and resize it down to a
+    proper Telegram video-thumbnail (max 320px on the long side, JPEG).
+
+    Returns a path to a temp file the caller should delete after the
+    upload, or None if no match/image/API key is available. Never raises -
+    a failure here should never block the leech itself.
+    """
+    if not title or not config_dict.get('TMDB_API_KEY'):
+        return None
+    try:
+        safe_query = quote_plus(title)
+        search_url = f"https://api.themoviedb.org/3/search/multi?api_key={config_dict['TMDB_API_KEY']}&query={safe_query}"
+        search_result = await fetch_json(search_url)
+        if not search_result or not search_result.get('results'):
+            return None
+        valid = [r for r in search_result['results'] if r.get('media_type') in ('movie', 'tv')]
+        if not valid:
+            return None
+        media_type, tmdb_id = valid[0]['media_type'], valid[0]['id']
+
+        img_url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}/images?api_key={config_dict['TMDB_API_KEY']}"
+        images = await fetch_json(img_url)
+        backdrops = (images or {}).get('backdrops', [])
+        if not backdrops:
+            return None
+        # Same preference as /poster's Landscape button: English-language
+        # backdrops first, then whatever's left.
+        landscape = [b for b in backdrops if b.get('iso_639_1') not in (None, 'xx')]
+        landscape.sort(key=lambda x: (0 if x.get('iso_639_1') == 'en' else 1, x.get('iso_639_1', '')))
+        best = (landscape or backdrops)[0]
+        full_url = f"https://image.tmdb.org/t/p/w780{best['file_path']}"
+
+        des_dir = 'Thumbnails'
+        if not await aiopath.exists(des_dir):
+            await mkdir(des_dir)
+        raw_path = ospath.join(des_dir, f"auto_thumb_{tmdb_id}_{int(time())}.jpg")
+
+        from aiohttp import ClientSession
+        async with ClientSession() as session:
+            async with session.get(full_url) as resp:
+                if resp.status != 200:
+                    return None
+                with open(raw_path, 'wb') as f:
+                    f.write(await resp.read())
+
+        # Telegram wants a small thumbnail (<=320px on the long side), not
+        # the full backdrop - resize it down in a thread (PIL is blocking).
+        def _resize():
+            with Image.open(raw_path) as img:
+                img = img.convert('RGB')
+                img.thumbnail((320, 320))
+                img.save(raw_path, 'JPEG')
+        await sync_to_async(_resize)
+        return raw_path
+    except Exception as e:
+        LOGGER.error(f"Auto Thumbnail fetch failed for '{title}': {e}")
+        return None
 
 
 async def get_audio_thumb(audio_file):
@@ -417,7 +484,12 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False, has_cust
         file_ = f"{ospath.splitext(file_)[0]}{suffix}{ospath.splitext(file_)[1]}" if '.' in file_ else f"{file_}{suffix}"
 
     cap_font = config_dict.get('CAP_FONT', '')
-    cap_mono = f"<{cap_font}>{nfile_}</{cap_font}>" if cap_font else nfile_
+    # The filename can end up containing characters like & < > (e.g. a title
+    # such as "Fast & Furious", or something odd an Auto Rename lookup
+    # returns) - left unescaped inside an HTML tag, Telegram rejects the
+    # whole caption with an entity-bounds/parse error instead of just
+    # showing it as plain text, breaking the upload's completion message.
+    cap_mono = f"<{cap_font}>{escape(nfile_)}</{cap_font}>" if cap_font else nfile_
     
     if lcaption and dirpath and not isMirror:
         def lowerVars(match):
@@ -428,7 +500,7 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False, has_cust
         slit[0] = re_sub(r'\{([^}]+)\}', lowerVars, slit[0])
         
         cap_mono = slit[0].format(
-            filename = nfile_,
+            filename = escape(nfile_),
             size = fsize,
             duration = get_readable_time(dur),
             quality = qual,
