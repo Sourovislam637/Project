@@ -20,7 +20,8 @@ from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.message_utils import sendCustomMsg, editReplyMarkup, sendMultiMessage, chat_info, deleteMessage, get_tg_link_content
 from bot.helper.ext_utils.fs_utils import clean_unwanted, is_archive, get_base_name
 from bot.helper.ext_utils.bot_utils import get_readable_file_size, is_telegram_link, is_url, sync_to_async, download_image_url
-from bot.helper.ext_utils.leech_utils import get_audio_thumb, get_media_info, get_document_type, take_ss, get_ss, get_mediainfo_link, format_filename, remux_container, ensure_streamable
+from bot.helper.ext_utils.leech_utils import get_audio_thumb, get_media_info, get_document_type, take_ss, get_ss, get_mediainfo_link, format_filename, remux_container, ensure_streamable, fetch_auto_thumbnail
+from bot.modules.autorename import get_title_for_thumbnail
 
 LOGGER = getLogger(__name__)
 getLogger("pyrogram").setLevel(ERROR)
@@ -427,6 +428,22 @@ class TgUploader:
                 # Auto Rename touched the name/extension, and regardless of
                 # whether this ends up sent as a video or a document.
                 self.__up_path = await ensure_streamable(self.__up_path)
+
+                # Auto Thumbnail: only when no manual Custom Thumbnail is
+                # set (thumb is None here means exactly that - see the
+                # check above) and the user has it enabled. Uses the same
+                # title-detection pipeline as Auto Rename's {title}, then
+                # the same "Landscape" TMDB image /poster uses. thumb is a
+                # local variable, so the existing cleanup below (triggered
+                # whenever self.__thumb is None, i.e. no persistent manual
+                # thumbnail) will delete this temp file after upload,
+                # exactly like it already does for auto-generated
+                # screenshot/audio-art thumbnails - no extra cleanup needed.
+                if thumb is None and user_data.get(self.__user_id, {}).get('auto_thumb', False):
+                    auto_title = await get_title_for_thumbnail(
+                        ospath.basename(self.__up_path), getattr(self.__listener, 'orig_caption', ''))
+                    if auto_title:
+                        thumb = await fetch_auto_thumbnail(auto_title)
 
             if self.__leech_utils['thumb']:
                 thumb = await self.get_custom_thumb(self.__leech_utils['thumb'])
