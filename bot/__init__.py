@@ -6,7 +6,7 @@ from inspect import signature
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from pyrogram import Client as tgClient, enums, utils as pyroutils
 from pymongo import MongoClient
-from asyncio import Lock, get_event_loop, new_event_loop, set_event_loop
+from asyncio import Lock, get_event_loop, new_event_loop, set_event_loop, iscoroutine, isfuture
 from dotenv import load_dotenv, dotenv_values
 from threading import Thread
 from time import sleep, time
@@ -224,6 +224,21 @@ def wztgClient(*args, **kwargs):
         kwargs['max_concurrent_transmissions'] = 4
     return tgClient(*args, **kwargs)
 
+# --- pyrofork / wzgram compat: loop + start() ---
+# pyrofork  : Client.start() is sync (auto-wrapped) and client.loop exists
+# wzgram    : Client.start() is a coroutine, client.loop may not exist
+try:
+    bot_loop = get_event_loop()
+except RuntimeError:
+    bot_loop = new_event_loop()
+    set_event_loop(bot_loop)
+
+def tg_start(client):
+    res = client.start()
+    if iscoroutine(res) or isfuture(res):
+        res = bot_loop.run_until_complete(res)
+    return res if res is not None else client
+
 # --- Add this block to ensure an event loop exists ---
 # try:
 #     loop = get_event_loop()
@@ -238,7 +253,8 @@ if len(USER_SESSION_STRING) != 0:
     log_info("Creating client from USER_SESSION_STRING")
     try:
         user = wztgClient('user', TELEGRAM_API, TELEGRAM_HASH, session_string=USER_SESSION_STRING,
-                        parse_mode=enums.ParseMode.HTML, no_updates=True).start()
+                        parse_mode=enums.ParseMode.HTML, no_updates=True)
+        user = tg_start(user)
         IS_PREMIUM_USER = user.me.is_premium
     except Exception as e:
         log_error(f"Failed making client from USER_SESSION_STRING : {e}")
@@ -873,8 +889,8 @@ log_info("Creating client from BOT_TOKEN")
 # bot needs and adds real memory overhead - lowered for low-RAM hosts
 # (e.g. a 512MB Heroku dyno). 50 comfortably handles many simultaneous users.
 bot = wztgClient('bot', TELEGRAM_API, TELEGRAM_HASH, bot_token=BOT_TOKEN, workers=50,
-               parse_mode=enums.ParseMode.HTML).start()
-bot_loop = bot.loop
+               parse_mode=enums.ParseMode.HTML)
+bot = tg_start(bot)
 
 def _global_asyncio_error_handler(loop, context):
     """
