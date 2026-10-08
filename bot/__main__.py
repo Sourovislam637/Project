@@ -19,7 +19,7 @@ from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from pyrogram.filters import command, private, regex
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from bot import bot, user, bot_name, config_dict, user_data, botStartTime, LOGGER, Interval, DATABASE_URL, QbInterval, INCOMPLETE_TASK_NOTIFIER, scheduler, bot_cache
+from bot import bot, bot_loop, user, bot_name, config_dict, user_data, botStartTime, LOGGER, Interval, DATABASE_URL, QbInterval, INCOMPLETE_TASK_NOTIFIER, scheduler, bot_cache
 from bot.version import get_version
 from .helper.ext_utils.fs_utils import start_cleanup, clean_all, exit_clean_up
 from .helper.ext_utils.bot_utils import get_readable_time, cmd_exec, sync_to_async, new_task, set_commands, update_user_ldata, get_stats
@@ -274,7 +274,7 @@ async def stop_signals():
         await bot.stop()
 
 
-bot_run = bot.loop.run_until_complete
+bot_run = bot_loop.run_until_complete
 bot_run(main())
 bot_run(idle())
 bot_run(stop_signals())
