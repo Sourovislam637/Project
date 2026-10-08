@@ -6,7 +6,6 @@ apscheduler
 aria2p
 asyncio
 beautifulsoup4
-cinemagoer
 cloudscraper
 cryptography
 dnspython
@@ -19,6 +18,7 @@ google-auth-oauthlib
 gunicorn
 git+https://github.com/zevtyardt/lk21.git
 httpx
+imdbio
 langcodes[data]
 lxml
 motor
@@ -31,7 +31,6 @@ psutil
 pybase64
 pycountry
 pymongo
-pyrofork==2.2.11
 python-dotenv
 python-magic
 qbittorrent-api
@@ -42,6 +41,7 @@ tenacity
 tgcrypto
 uv
 uvloop==0.21.0
+wzgram
 xattr
 yt-dlp
 setuptools
