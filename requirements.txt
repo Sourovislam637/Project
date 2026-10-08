@@ -43,7 +43,7 @@ uv
 uvloop==0.21.0
 wzgram
 xattr
-yt-dlp
+yt-dlp[default,curl-cffi]
 setuptools
 pymediainfo
 pyaes
