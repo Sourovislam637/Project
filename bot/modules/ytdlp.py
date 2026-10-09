@@ -13,7 +13,7 @@ from bot import DOWNLOAD_DIR, bot, categories_dict, config_dict, user_data, LOGG
 from bot.helper.ext_utils.task_manager import task_utils
 from bot.helper.telegram_helper.message_utils import sendMessage, editMessage, deleteMessage, auto_delete_message, delete_links, open_category_btns, open_dump_btns
 from bot.helper.telegram_helper.button_build import ButtonMaker
-from bot.helper.ext_utils.bot_utils import get_readable_file_size, fetch_user_tds, fetch_user_dumps, is_url, is_gdrive_link, new_task, sync_to_async, new_task, is_rclone_path, new_thread, get_readable_time, arg_parser
+from bot.helper.ext_utils.bot_utils import find_link_in_message, get_readable_file_size, fetch_user_tds, fetch_user_dumps, is_url, is_gdrive_link, new_task, sync_to_async, new_task, is_rclone_path, new_thread, get_readable_time, arg_parser
 from bot.helper.mirror_utils.download_utils.yt_dlp_download import YoutubeDLHelper
 from bot.helper.mirror_utils.rclone_utils.list import RcloneList
 from bot.helper.telegram_helper.bot_commands import BotCommands
@@ -370,7 +370,7 @@ async def _ytdl(client, message, isLeech=False, sameDir=None, bulk=[]):
         tag = message.from_user.mention
 
     if not link and (reply_to := message.reply_to_message) and reply_to.text:
-        link = reply_to.text.split('\n', 1)[0].strip()
+        link = find_link_in_message(reply_to)
 
     if not is_url(link):
         btn = ButtonMaker()
