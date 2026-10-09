@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from traceback import format_exc
-from asyncio import sleep, Lock
+from asyncio import sleep, Lock, get_running_loop
 from aiofiles.os import remove as aioremove
 from random import choice as rchoice
 from time import time
@@ -13,7 +13,7 @@ from pyrogram.types import InputMediaPhoto
 from pyrogram.errors import ReplyMarkupInvalid, FloodWait, PeerIdInvalid, ChannelInvalid, RPCError, UserNotParticipant, MessageNotModified, MessageEmpty, PhotoInvalidDimensions, WebpageCurlFailed, MediaEmpty
 
 from bot import config_dict, user_data, categories_dict, bot_cache, LOGGER, bot_name, status_reply_dict, status_reply_dict_lock, Interval, bot, user, download_dict_lock
-from bot.helper.ext_utils.bot_utils import get_readable_message, setInterval, sync_to_async, download_image_url, fetch_user_tds, fetch_user_dumps, new_thread
+from bot.helper.ext_utils.bot_utils import UI_POOL, get_readable_message, setInterval, sync_to_async, download_image_url, fetch_user_tds, fetch_user_dumps, new_thread
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.ext_utils.exceptions import TgLinkException
 
@@ -305,8 +305,7 @@ async def update_all_messages(force=False):
         for chat_id in list(status_reply_dict.keys()):
             status_reply_dict[chat_id][1] = time()
         chats = list(status_reply_dict.items())
-    async with download_dict_lock:
-        msg, buttons = await sync_to_async(get_readable_message)
+    msg, buttons = await get_running_loop().run_in_executor(UI_POOL, get_readable_message)
     if msg is None:
         return
     for chat_id, entry in chats:
@@ -337,8 +336,7 @@ _status_send_locks = {}
 
 
 async def sendStatusMessage(msg):
-    async with download_dict_lock:
-        progress, buttons = await sync_to_async(get_readable_message)
+    progress, buttons = await get_running_loop().run_in_executor(UI_POOL, get_readable_message)
     if progress is None:
         return
     chat_id = msg.chat.id
