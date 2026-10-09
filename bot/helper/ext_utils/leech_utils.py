@@ -81,6 +81,35 @@ async def remux_container(inp_path, out_path):
     return False
 
 
+def _moov_at_end(path):
+    """True when an MP4/MOV has its 'mdat' before 'moov' (needs faststart). Reads only box headers."""
+    try:
+        size = ospath.getsize(path)
+        pos = 0
+        with open(path, 'rb') as f:
+            while pos + 8 <= size:
+                f.seek(pos)
+                hdr = f.read(8)
+                if len(hdr) < 8:
+                    break
+                bsize = int.from_bytes(hdr[:4], 'big')
+                btype = hdr[4:8]
+                if bsize == 1:
+                    bsize = int.from_bytes(f.read(8), 'big')
+                elif bsize == 0:
+                    bsize = size - pos
+                if btype == b'moov':
+                    return False
+                if btype == b'mdat':
+                    return True
+                if bsize < 8:
+                    break
+                pos += bsize
+    except Exception:
+        pass
+    return False
+
+
 async def ensure_streamable(path):
     """
     Re-muxes a video (stream copy, no re-encoding - fast and lossless) so it
@@ -99,7 +128,10 @@ async def ensure_streamable(path):
     as-is, exactly as before this existed.
     """
     ext = ospath.splitext(path)[1].lower()
-    if ext not in ('.mp4', '.mov', '.m4v', '.mkv', '.webm'):
+    # PERF: remuxing rewrites the WHOLE file (disk read+write, minutes for big files) for
+    # every upload. Only MP4-family files whose moov atom sits at the END need it; MKV/WebM
+    # and already-faststart MP4 are uploaded as they are.
+    if ext not in ('.mp4', '.mov', '.m4v') or not await sync_to_async(_moov_at_end, path):
         return path
 
     tmp_path = f"{path}.streamable{ext}"
@@ -206,42 +238,10 @@ async def get_document_type(path):
     return is_video, is_audio, is_image
 
 
-async def fetch_auto_thumbnail(title):
-    """
-    Auto Thumbnail: given a resolved title, find a landscape (backdrop)
-    image via TMDB - the same "English landscape" images shown under
-    /poster's Landscape button - download it, and resize it down to a
-    proper Telegram video-thumbnail (max 320px on the long side, JPEG).
+_AUTO_THUMB_URLS = {}
 
-    Returns a path to a temp file the caller should delete after the
-    upload, or None if no match/image/API key is available. Never raises -
-    a failure here should never block the leech itself.
-    """
-    if not title or not config_dict.get('TMDB_API_KEY'):
-        return None
-    try:
-        safe_query = quote_plus(title)
-        search_url = f"https://api.themoviedb.org/3/search/multi?api_key={config_dict['TMDB_API_KEY']}&query={safe_query}"
-        search_result = await fetch_json(search_url)
-        if not search_result or not search_result.get('results'):
-            return None
-        valid = [r for r in search_result['results'] if r.get('media_type') in ('movie', 'tv')]
-        if not valid:
-            return None
-        media_type, tmdb_id = valid[0]['media_type'], valid[0]['id']
 
-        img_url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}/images?api_key={config_dict['TMDB_API_KEY']}"
-        images = await fetch_json(img_url)
-        backdrops = (images or {}).get('backdrops', [])
-        if not backdrops:
-            return None
-        # Same preference as /poster's Landscape button: English-language
-        # backdrops first, then whatever's left.
-        landscape = [b for b in backdrops if b.get('iso_639_1') not in (None, 'xx')]
-        landscape.sort(key=lambda x: (0 if x.get('iso_639_1') == 'en' else 1, x.get('iso_639_1', '')))
-        best = (landscape or backdrops)[0]
-        full_url = f"https://image.tmdb.org/t/p/w780{best['file_path']}"
-
+async def _download_auto_thumb(tmdb_id, full_url):
         des_dir = 'Thumbnails'
         if not await aiopath.exists(des_dir):
             await mkdir(des_dir)
@@ -264,6 +264,51 @@ async def fetch_auto_thumbnail(title):
                 img.save(raw_path, 'JPEG')
         await sync_to_async(_resize)
         return raw_path
+
+
+async def fetch_auto_thumbnail(title):
+    """
+    Auto Thumbnail: given a resolved title, find a landscape (backdrop)
+    image via TMDB - the same "English landscape" images shown under
+    /poster's Landscape button - download it, and resize it down to a
+    proper Telegram video-thumbnail (max 320px on the long side, JPEG).
+
+    Returns a path to a temp file the caller should delete after the
+    upload, or None if no match/image/API key is available. Never raises -
+    a failure here should never block the leech itself.
+    """
+    if not title or not config_dict.get('TMDB_API_KEY'):
+        return None
+    try:
+        if (cached := _AUTO_THUMB_URLS.get(title)):
+            tmdb_id, full_url = cached
+            return await _download_auto_thumb(tmdb_id, full_url)
+        safe_query = quote_plus(title)
+        search_url = f"https://api.themoviedb.org/3/search/multi?api_key={config_dict['TMDB_API_KEY']}&query={safe_query}"
+        search_result = await fetch_json(search_url)
+        if not search_result or not search_result.get('results'):
+            return None
+        valid = [r for r in search_result['results'] if r.get('media_type') in ('movie', 'tv')]
+        if not valid:
+            return None
+        media_type, tmdb_id = valid[0]['media_type'], valid[0]['id']
+
+        img_url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}/images?api_key={config_dict['TMDB_API_KEY']}"
+        images = await fetch_json(img_url)
+        backdrops = (images or {}).get('backdrops', [])
+        if not backdrops:
+            return None
+        # Same preference as /poster's Landscape button: English-language
+        # backdrops first, then whatever's left.
+        landscape = [b for b in backdrops if b.get('iso_639_1') not in (None, 'xx')]
+        landscape.sort(key=lambda x: (0 if x.get('iso_639_1') == 'en' else 1, x.get('iso_639_1', '')))
+        best = (landscape or backdrops)[0]
+        full_url = f"https://image.tmdb.org/t/p/w780{best['file_path']}"
+
+        if len(_AUTO_THUMB_URLS) > 200:
+            _AUTO_THUMB_URLS.clear()
+        _AUTO_THUMB_URLS[title] = (tmdb_id, full_url)
+        return await _download_auto_thumb(tmdb_id, full_url)
     except Exception as e:
         LOGGER.error(f"Auto Thumbnail fetch failed for '{title}': {e}")
         return None
