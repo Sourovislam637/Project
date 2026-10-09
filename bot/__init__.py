@@ -17,6 +17,10 @@ from qbittorrentapi import Client as qbClient
 from faulthandler import enable as faulthandler_enable
 from socket import setdefaulttimeout
 from logging import getLogger, Formatter, FileHandler, StreamHandler, INFO, ERROR, basicConfig, error as log_error, info as log_info, warning as log_warning
+from logging import WARNING, getLevelName
+from logging.handlers import RotatingFileHandler
+from functools import wraps
+from inspect import iscoroutinefunction
 from uvloop import install
 
 faulthandler_enable()
@@ -28,14 +32,19 @@ pyroutils.MIN_CHANNEL_ID = -100999999999999
 
 botStartTime = time()
 
+# Less logging = faster bot + small log.txt (so /log always works).
+# LOG_LEVEL env: DEBUG / INFO / WARNING (default) / ERROR
+_lvl = getLevelName(environ.get('LOG_LEVEL', 'WARNING').strip().upper())
+_lvl = _lvl if isinstance(_lvl, int) else WARNING
+
 basicConfig(format="[%(asctime)s] [%(levelname)s] - %(message)s", #  [%(filename)s:%(lineno)d]
             datefmt="%d-%b-%y %I:%M:%S %p",
-            handlers=[FileHandler('log.txt'), StreamHandler()],
-            level=INFO)
+            handlers=[RotatingFileHandler('log.txt', maxBytes=2 * 1024 * 1024, backupCount=1, encoding='utf-8'),
+                      StreamHandler()],
+            level=_lvl)
 
-getLogger("pyrogram").setLevel(ERROR)
-getLogger("aiohttp").setLevel(ERROR)
-getLogger("httpx").setLevel(ERROR)
+for _noisy in ("pyrogram", "aiohttp", "httpx", "urllib3", "apscheduler", "pymongo", "asyncio", "aria2p", "PIL"):
+    getLogger(_noisy).setLevel(ERROR)
 
 LOGGER = getLogger(__name__)
 
@@ -564,6 +573,9 @@ if len(GD_INFO) == 0:
 SAVE_MSG = environ.get('SAVE_MSG', '')
 SAVE_MSG = SAVE_MSG.lower() == 'true'
 
+# Magic (instant) Thumbnail: copies sent to user/dump get an extra HD cover via Bot API (no download/upload)
+MAGIC_THUMB = environ.get('MAGIC_THUMB', 'false').lower() == 'true'
+
 SAFE_MODE = environ.get('SAFE_MODE', '')
 SAFE_MODE = SAFE_MODE.lower() == 'true'
 
@@ -727,6 +739,7 @@ config_dict = {'ANIME_TEMPLATE': ANIME_TEMPLATE,
                'RSS_CHAT': RSS_CHAT,
                'RSS_DELAY': RSS_DELAY,
                'SAVE_MSG': SAVE_MSG,
+               'MAGIC_THUMB': MAGIC_THUMB,
                'SAFE_MODE': SAFE_MODE,
                'SEARCH_API_LINK': SEARCH_API_LINK,
                'SEARCH_LIMIT': SEARCH_LIMIT,
@@ -891,6 +904,46 @@ log_info("Creating client from BOT_TOKEN")
 bot = wztgClient('bot', TELEGRAM_API, TELEGRAM_HASH, bot_token=BOT_TOKEN, workers=50,
                parse_mode=enums.ParseMode.HTML)
 bot = tg_start(bot)
+
+
+# Every command/callback handler runs as its own task. Without this a slow handler
+# (FloodWait sleep, long await, ...) keeps a dispatcher worker busy and new commands
+# are answered only 1-2 minutes later while the running tasks keep working fine.
+# Works the same on pyrofork and wzgram.
+def _spawn_handler(callback):
+    if getattr(callback, '_spawned', False):
+        return callback
+
+    async def _run(client, args, kwargs):
+        try:
+            res = callback(client, *args, **kwargs)
+            if iscoroutine(res):
+                await res
+        except Exception as e:
+            LOGGER.error(f"Handler {getattr(callback, '__name__', callback)} failed: {e}", exc_info=True)
+
+    @wraps(callback)
+    async def wrapper(client, *args, **kwargs):
+        bot_loop.create_task(_run(client, args, kwargs))
+
+    wrapper._spawned = True
+    return wrapper
+
+
+_orig_add_handler = bot.add_handler
+
+
+def _add_handler(handler, group=0):
+    try:
+        cb = handler.callback
+        if cb is not None and (iscoroutinefunction(cb) or getattr(cb, '_is_new_task', False)):
+            handler.callback = _spawn_handler(cb)
+    except Exception as e:
+        LOGGER.error(f"add_handler wrap skipped: {e}")
+    return _orig_add_handler(handler, group)
+
+
+bot.add_handler = _add_handler
 
 def _global_asyncio_error_handler(loop, context):
     """
