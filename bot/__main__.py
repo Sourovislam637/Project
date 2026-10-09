@@ -2,7 +2,7 @@ from time import time, monotonic
 from datetime import datetime
 from sys import executable
 from os import execl as osexecl
-from asyncio import create_subprocess_exec, gather, run as asyrun
+from asyncio import create_subprocess_exec, gather, run as asyrun, wait_for
 from uuid import uuid4
 from base64 import b64decode
 from importlib import import_module, reload
@@ -104,18 +104,43 @@ async def login(_, message):
 
 async def restart(client, message):
     restart_message = await sendMessage(message, BotTheme('RESTARTING'))
-    if scheduler.running:
-        scheduler.shutdown(wait=False)
-    await delete_all_messages()
-    for interval in [QbInterval, Interval]:
-        if interval:
-            interval[0].cancel()
-    await sync_to_async(clean_all)
-    proc1 = await create_subprocess_exec('pkill', '-9', '-f', f'gunicorn|{bot_cache["pkgs"][-1]}')
-    proc2 = await create_subprocess_exec('python3', 'update.py')
-    await gather(proc1.wait(), proc2.wait())
-    async with aiopen(".restartmsg", "w") as f:
-        await f.write(f"{restart_message.chat.id}\n{restart_message.id}\n")
+    if isinstance(restart_message, str):
+        chat_id, msg_id = message.chat.id, message.id
+    else:
+        chat_id, msg_id = restart_message.chat.id, restart_message.id
+    try:
+        async with aiopen(".restartmsg", "w") as f:
+            await f.write(f"{chat_id}\n{msg_id}\n")
+    except Exception as e:
+        LOGGER.error(f"restartmsg write failed: {e}")
+    try:
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
+        for interval in [QbInterval, Interval]:
+            if interval:
+                interval[0].cancel()
+    except Exception as e:
+        LOGGER.error(f"restart: stop scheduler/intervals failed: {e}")
+    # every step has a timeout so /r can never hang forever
+    for coro in (delete_all_messages(), sync_to_async(clean_all)):
+        try:
+            await wait_for(coro, 30)
+        except Exception as e:
+            LOGGER.error(f"restart: cleanup step failed/timeout: {e!r}")
+    try:
+        proc1 = await create_subprocess_exec('pkill', '-9', '-f', f'gunicorn|{bot_cache["pkgs"][-1]}')
+        proc2 = await create_subprocess_exec('python3', 'update.py')
+        try:
+            await wait_for(gather(proc1.wait(), proc2.wait()), 90)
+        except Exception as e:
+            LOGGER.error(f"restart: pkill/update timeout: {e!r}")
+            for pr in (proc1, proc2):
+                try:
+                    pr.kill()
+                except Exception:
+                    pass
+    except Exception as e:
+        LOGGER.error(f"restart: subprocess failed: {e!r}")
     osexecl(executable, executable, "-m", "bot")
 
 
@@ -127,10 +152,29 @@ async def ping(_, message):
 
 
 async def log(_, message):
+    try:
+        size = await aiopath.getsize('log.txt') if await aiopath.exists('log.txt') else 0
+    except Exception:
+        size = 0
+    if size == 0:
+        return await sendMessage(message, "<b>Log is empty</b> (logging level is low). Set <code>LOG_LEVEL=INFO</code> to get more logs.")
+    send_path = 'log.txt'
+    if size > 8 * 1024 * 1024:  # keep only the tail, Telegram/slow upload safe
+        try:
+            async with aiopen('log.txt', 'rb') as f:
+                await f.seek(size - 4 * 1024 * 1024)
+                data = await f.read()
+            async with aiopen('log_tail.txt', 'wb') as f:
+                await f.write(data)
+            send_path = 'log_tail.txt'
+        except Exception as e:
+            LOGGER.error(f"log tail failed: {e}")
     buttons = ButtonMaker()
     buttons.ibutton(BotTheme('LOG_DISPLAY_BT'), f'kpsmlx {message.from_user.id} logdisplay')
     buttons.ibutton(BotTheme('WEB_PASTE_BT'), f'kpsmlx {message.from_user.id} webpaste')
-    await sendFile(message, 'log.txt', buttons=buttons.build_menu(1))
+    res = await sendFile(message, send_path, buttons=buttons.build_menu(1))
+    if isinstance(res, str):
+        await sendMessage(message, f"<b>Log send failed:</b> <code>{res[:300]}</code>")
 
 
 async def search_images():
@@ -143,7 +187,7 @@ async def search_images():
             query = query.strip().replace(" ", "+")
             for page in range(1, total_pages + 1):
                 url = f"{base_url}?wallpaper={query}&width=1280&height=720&page={page}"
-                r = rget(url)
+                r = await sync_to_async(rget, url, timeout=20)
                 soup = BeautifulSoup(r.text, "html.parser")
                 images = soup.select('img[data-src^="https://c4.wallpaperflare.com/wallpaper"]')
                 if len(images) == 0:
