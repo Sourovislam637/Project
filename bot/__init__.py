@@ -226,11 +226,9 @@ if len(EXCEP_CHATS) == 0:
 
 def wztgClient(*args, **kwargs):
     if 'max_concurrent_transmissions' in signature(tgClient.__init__).parameters:
-        # 1000 concurrent transmissions each hold their own MTProto
-        # connection/buffers - wildly oversized for a low-RAM (e.g. 512MB
-        # Heroku) deployment and a likely contributor to memory crashes.
-        # A small number is plenty even for several simultaneous leeches.
-        kwargs['max_concurrent_transmissions'] = 4
+        # It is only a semaphore on chunk transfers. Old fast repo used 1000; a low value (4)
+        # throttles every upload/download to a few chunks at a time = slow transfers.
+        kwargs['max_concurrent_transmissions'] = int(environ.get('MAX_TRANSMISSIONS', '1000') or 1000)
     return tgClient(*args, **kwargs)
 
 # --- pyrofork / wzgram compat: loop + start() ---
@@ -895,10 +893,8 @@ else:
     qb_client.app_set_preferences(qb_opt)
 
 log_info("Creating client from BOT_TOKEN")
-# workers=1000 update-handling workers is far more than a personal/small-scale
-# bot needs and adds real memory overhead - lowered for low-RAM hosts
-# (e.g. a 512MB Heroku dyno). 50 comfortably handles many simultaneous users.
-bot = wztgClient('bot', TELEGRAM_API, TELEGRAM_HASH, bot_token=BOT_TOKEN, workers=50,
+# update workers are cheap asyncio tasks (old fast repo: 1000). 50 made busy bots queue commands.
+bot = wztgClient('bot', TELEGRAM_API, TELEGRAM_HASH, bot_token=BOT_TOKEN, workers=int(environ.get('TG_WORKERS', '1000') or 1000),
                parse_mode=enums.ParseMode.HTML)
 bot = tg_start(bot)
 
