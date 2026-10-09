@@ -466,6 +466,7 @@ def new_task(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         return bot_loop.create_task(func(*args, **kwargs))
+    wrapper._is_new_task = True
     return wrapper
 
 
