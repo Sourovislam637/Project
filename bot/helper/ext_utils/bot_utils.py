@@ -35,6 +35,7 @@ from bot.helper.ext_utils.telegraph_helper import telegraph
 from bot.helper.ext_utils.shortners import short_url
 
 THREADPOOL   = ThreadPoolExecutor(max_workers=50)
+UI_POOL      = ThreadPoolExecutor(max_workers=4)   # status text only, never starved by heavy tasks
 MAGNET_REGEX = r'magnet:\?xt=urn:(btih|btmh):[a-zA-Z0-9]*\s*'
 URL_REGEX    = r'^(?!\/)(rtmps?:\/\/|mms:\/\/|rtsp:\/\/|https?:\/\/|ftp:\/\/)?([^\/:]+:[^\/@]+@)?(www\.)?(?=[^\/:\s]+\.[^\/:\s]+)([^\/:\s]+\.[^\/:\s]+)(:\d+)?(\/[^#\s]*[\s\S]*)?(\?[^#\s]*)?(#.*)?$'
 SIZE_UNITS   = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB']
@@ -211,15 +212,18 @@ def get_readable_message():
     if PAGE_NO > PAGES and PAGES != 0:
         globals()['STATUS_START'] = STATUS_LIMIT * (PAGES - 1)
         globals()['PAGE_NO'] = PAGES
-    for download in list(download_dict.values())[STATUS_START:STATUS_LIMIT+STATUS_START]:
+    _all = list(download_dict.values())
+    _st = {}  # status() may hit qBit/aria2 API: call it once per task
+    for download in _all[STATUS_START:STATUS_LIMIT+STATUS_START]:
+        _st[id(download)] = dstatus = download.status()
         msg_link = download.message.link if download.message.chat.type in [
             ChatType.SUPERGROUP, ChatType.CHANNEL] and not config_dict['DELETE_LINKS'] else ''
         elapsed = time() - download.message.date.timestamp()
         msg += BotTheme('STATUS_NAME', Name="Task is being Processed!" if config_dict['SAFE_MODE'] and elapsed >= config_dict['STATUS_UPDATE_INTERVAL'] else escape(f'{download.name()}'))
-        if download.status() not in [MirrorStatus.STATUS_SPLITTING, MirrorStatus.STATUS_SEEDING]:
+        if dstatus not in [MirrorStatus.STATUS_SPLITTING, MirrorStatus.STATUS_SEEDING]:
             msg += BotTheme('BAR', Bar=f"{get_progress_bar_string(download.progress())} {download.progress()}")
             msg += BotTheme('PROCESSED', Processed=f"{download.processed_bytes()} of {download.size()}")
-            msg += BotTheme('STATUS', Status=download.status(), Url=msg_link)
+            msg += BotTheme('STATUS', Status=dstatus, Url=msg_link)
             msg += BotTheme('ETA', Eta=download.eta())
             msg += BotTheme('SPEED', Speed=download.speed())
             msg += BotTheme('ELAPSED', Elapsed=get_readable_time(elapsed))
@@ -231,8 +235,8 @@ def get_readable_message():
                     msg += BotTheme('LEECHERS', Leechers=download.leechers_num())
                 except Exception:
                     pass
-        elif download.status() == MirrorStatus.STATUS_SEEDING:
-            msg += BotTheme('STATUS', Status=download.status(), Url=msg_link)
+        elif dstatus == MirrorStatus.STATUS_SEEDING:
+            msg += BotTheme('STATUS', Status=dstatus, Url=msg_link)
             msg += BotTheme('SEED_SIZE', Size=download.size())
             msg += BotTheme('SEED_SPEED', Speed=download.upload_speed())
             msg += BotTheme('UPLOADED', Upload=download.uploaded_bytes())
@@ -240,7 +244,7 @@ def get_readable_message():
             msg += BotTheme('TIME', Time=download.seeding_time())
             msg += BotTheme('SEED_ENGINE', Engine=download.eng())
         else:
-            msg += BotTheme('STATUS', Status=download.status(), Url=msg_link)
+            msg += BotTheme('STATUS', Status=dstatus, Url=msg_link)
             msg += BotTheme('STATUS_SIZE', Size=download.size())
             msg += BotTheme('NON_ENGINE', Engine=download.eng())
 
@@ -270,8 +274,8 @@ def get_readable_message():
 
     dl_speed = 0
     up_speed = 0
-    for download in download_dict.values():
-        tstatus = download.status()
+    for download in _all:
+        tstatus = _st[id(download)] if id(download) in _st else download.status()
         spd = download.speed() if tstatus != MirrorStatus.STATUS_SEEDING else download.upload_speed()
         speed_in_bytes_per_second = convert_speed_to_bytes_per_second(spd)
         if tstatus == MirrorStatus.STATUS_DOWNLOADING:
@@ -796,3 +800,21 @@ async def set_commands(client):
         LOGGER.info('Bot Commands have been Set & Updated')
     except Exception as err:
         LOGGER.error(err)
+
+
+_LINK_RE = __import__('re').compile(r'(magnet:\?[^\s]+|https?://[^\s<>"]+)', __import__('re').IGNORECASE)
+
+
+def find_link_in_message(msg):
+    """First link/magnet anywhere in a (text) message: plain text, then hidden text_link entities.
+    Falls back to the old behaviour (first line). Never raises."""
+    try:
+        text = (msg.text or '').strip()
+        if m := _LINK_RE.search(text):
+            return m.group(1).strip()
+        for e in (msg.entities or []):
+            if getattr(getattr(e, 'type', None), 'name', '') == 'TEXT_LINK' and getattr(e, 'url', None):
+                return e.url
+        return text.split('\n', 1)[0].strip()
+    except Exception:
+        return ''
