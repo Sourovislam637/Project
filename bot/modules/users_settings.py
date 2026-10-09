@@ -320,6 +320,9 @@ async def get_user_settings(from_user, key=None, edit_type=None, edit_mode=None)
             auto_thumb_mode = 'Enabled' if user_dict.get('auto_thumb', False) else 'Disabled'
             text += f"➲ <b>Auto Thumbnail :</b> <i>{auto_thumb_mode}</i>\n\n"
             buttons.ibutton('Disable Auto Thumbnail' if auto_thumb_mode == 'Enabled' else 'Enable Auto Thumbnail', f"userset {user_id} auto_thumb", "header")
+            magic_on = user_dict.get('magic_thumb', config_dict.get('MAGIC_THUMB', False))
+            text += f"➲ <b>Magic Thumbnail :</b> <i>{'Enabled' if magic_on else 'Disabled'}</i>\n\n"
+            buttons.ibutton('Disable Magic Thumbnail' if magic_on else 'Enable Magic Thumbnail', f"userset {user_id} magic_thumb", "header")
         elif key == 'yt_opt':
             set_exist = 'Not Exists' if (val:=user_dict.get('yt_opt', config_dict.get('YT_DLP_OPTIONS', ''))) == '' else val
             text += f"➲ <b>YT-DLP Options :</b> <code>{escape(trun(set_exist, 600))}</code>\n\n"
@@ -845,6 +848,13 @@ async def edit_user_settings(client, query):
         await query.answer()
         update_user_ldata(user_id, 'media_group', not user_dict.get('media_group', False))
         await update_user_settings(query, 'leech')
+        if DATABASE_URL:
+            await DbManger().update_user_data(user_id)
+    elif data[2] == 'magic_thumb':
+        handler_dict[user_id] = False
+        await query.answer()
+        update_user_ldata(user_id, 'magic_thumb', not user_dict.get('magic_thumb', config_dict.get('MAGIC_THUMB', False)))
+        await update_user_settings(query, 'thumb', 'leech')
         if DATABASE_URL:
             await DbManger().update_user_data(user_id)
     elif data[2] == 'auto_thumb':
