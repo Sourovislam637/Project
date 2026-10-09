@@ -119,7 +119,7 @@ async def is_multi_streams(path):
         result = await cmd_exec(["ffprobe", "-hide_banner", "-loglevel", "error", "-print_format",
                                  "json", "-show_streams", path])
         if res := result[1]:
-            LOGGER.warning(f'Get Video Streams: {res}')
+            LOGGER.debug(f'Get Video Streams: {res}')
     except Exception as e:
         LOGGER.error(f'Get Video Streams: {e}. Mostly File not found!')
         return False
@@ -142,7 +142,7 @@ async def get_media_info(path, metadata=False):
         result = await cmd_exec(["ffprobe", "-hide_banner", "-loglevel", "error", "-print_format",
                                  "json", "-show_format", "-show_streams", path])
         if res := result[1]:
-            LOGGER.warning(f'Media Info FF: {res}')
+            LOGGER.debug(f'Media Info FF: {res}')
     except Exception as e:
         LOGGER.error(f'Media Info: {e}. Mostly File not found!')
         return (0, "", "", "") if metadata else (0, None, None)
@@ -190,7 +190,7 @@ async def get_document_type(path):
         result = await cmd_exec(["ffprobe", "-hide_banner", "-loglevel", "error", "-print_format",
                                  "json", "-show_streams", path])
         if res := result[1]:
-            LOGGER.warning(f'Get Document Type: {res}')
+            LOGGER.debug(f'Get Document Type: {res}')
     except Exception as e:
         LOGGER.error(f'Get Document Type: {e}. Mostly File not found!')
         return is_video, is_audio, is_image
@@ -282,7 +282,7 @@ async def get_audio_thumb(audio_file):
         if 'does not contain any stream' in err:
             # Most audio files (e.g. FLAC rips) simply have no embedded
             # cover art - this is normal, not worth logging as an error.
-            LOGGER.info(f'No embedded thumbnail found in audio: {audio_file}')
+            LOGGER.debug(f'No embedded thumbnail found in audio: {audio_file}')
         else:
             LOGGER.error(
                 f'Error while extracting thumbnail from audio. Name: {audio_file} stderr: {err}')
@@ -456,7 +456,7 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False, has_cust
             elif len(args) == 1:
                 __newFileName = re_sub(args[0], '', __newFileName)
         file_ = __newFileName + ospath.splitext(file_)[1]
-        LOGGER.info(f"New Remname : {file_}")
+        LOGGER.debug(f"New Remname : {file_}")
 
     nfile_ = file_
     if prefix:
