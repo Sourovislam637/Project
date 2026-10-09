@@ -286,7 +286,19 @@ async def log_check():
                 LOGGER.error(f"Not Connected Chat ID : {chat_id}, ERROR: {e}")
     
 
+async def loop_lag_watch():
+    # logs a WARNING when the event loop was blocked > 2s (shows the real cause of slow replies)
+    from asyncio import sleep as asleep
+    while True:
+        t = monotonic()
+        await asleep(1)
+        lag = monotonic() - t - 1
+        if lag > 2:
+            LOGGER.warning(f"Event loop lagged {lag:.1f}s (something blocked the bot)")
+
+
 async def main():
+    bot_loop.create_task(loop_lag_watch())
     await gather(start_cleanup(), torrent_search.initiate_search_tools(), restart_notification(), search_images(), set_commands(bot), log_check())
     await sync_to_async(start_aria2_listener, wait=False)
     
