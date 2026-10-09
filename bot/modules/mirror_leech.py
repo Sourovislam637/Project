@@ -11,7 +11,7 @@ from cloudscraper import create_scraper
 
 from bot import bot, DOWNLOAD_DIR, LOGGER, config_dict, bot_name, categories_dict, user_data
 from bot.helper.mirror_utils.download_utils.direct_downloader import add_direct_download
-from bot.helper.ext_utils.bot_utils import is_url, is_magnet, is_mega_link, is_gdrive_link, get_content_type, new_task, sync_to_async, is_rclone_path, is_telegram_link, arg_parser, fetch_user_tds, fetch_user_dumps, get_stats
+from bot.helper.ext_utils.bot_utils import find_link_in_message, is_url, is_magnet, is_mega_link, is_gdrive_link, get_content_type, new_task, sync_to_async, is_rclone_path, is_telegram_link, arg_parser, fetch_user_tds, fetch_user_dumps, get_stats
 from bot.helper.ext_utils.exceptions import DirectDownloadLinkException
 from bot.helper.ext_utils.task_manager import task_utils
 from bot.helper.mirror_utils.download_utils.aria2_download import add_aria2c_download
@@ -182,7 +182,7 @@ async def _mirror_leech(client, message, isQbit=False, isLeech=False, sameDir=No
     decrypter = None
     if not link and (reply_to := message.reply_to_message):
         if reply_to.text:
-            link = reply_to.text.split('\n', 1)[0].strip()
+            link = find_link_in_message(reply_to)
     if link and is_telegram_link(link):
         try:
             reply_to, session = await get_tg_link_content(link, message.from_user.id)
@@ -198,11 +198,14 @@ async def _mirror_leech(client, message, isQbit=False, isLeech=False, sameDir=No
             return
 
     if reply_to:
-        file_ = getattr(reply_to, reply_to.media.value) if reply_to.media else None
+        # a text message with a link has media=WEB_PAGE (link preview): that is not a file
+        has_media = reply_to.media and reply_to.media.value != 'web_page'
+        file_ = getattr(reply_to, reply_to.media.value) if has_media else None
         if file_ is None and reply_to.text:
-            reply_text = reply_to.text.split('\n', 1)[0].strip()
-            if is_url(reply_text) or is_magnet(reply_text):
-                link = reply_text
+            if not (is_url(link) or is_magnet(link)) or is_telegram_link(link):
+                reply_text = find_link_in_message(reply_to)
+                if is_url(reply_text) or is_magnet(reply_text):
+                    link = reply_text
         elif reply_to.document and (file_.mime_type == 'application/x-bittorrent' or file_.file_name.endswith('.torrent')):
             link = await reply_to.download()
             file_ = None
