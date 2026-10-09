@@ -316,12 +316,32 @@ async def log_check():
     
 
 async def loop_lag_watch():
-    # logs a WARNING when the event loop was blocked > 2s (shows the real cause of slow replies)
+    # Heartbeat on the loop + a watcher THREAD. When the loop stops answering for >1.5s the
+    # thread logs the exact stack the loop is stuck in, so the blocker shows up in /log.
+    import sys, threading, traceback
     from asyncio import sleep as asleep
+    state = {'beat': monotonic(), 'tid': threading.get_ident(), 'reported': 0.0}
+
+    def watcher():
+        import time as _t
+        while True:
+            _t.sleep(0.5)
+            lag = monotonic() - state['beat']
+            if lag > 1.5 and state['reported'] != state['beat']:
+                state['reported'] = state['beat']
+                try:
+                    frame = sys._current_frames().get(state['tid'])
+                    stack = ''.join(traceback.format_stack(frame)[-6:]) if frame else '?'
+                    LOGGER.warning(f"Event loop blocked >{lag:.1f}s at:\n{stack}")
+                except Exception:
+                    pass
+
+    threading.Thread(target=watcher, daemon=True, name='loop-watchdog').start()
     while True:
         t = monotonic()
-        await asleep(1)
-        lag = monotonic() - t - 1
+        state['beat'] = t
+        await asleep(0.5)
+        lag = monotonic() - t - 0.5
         if lag > 2:
             LOGGER.warning(f"Event loop lagged {lag:.1f}s (something blocked the bot)")
 
