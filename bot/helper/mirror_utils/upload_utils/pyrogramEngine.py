@@ -22,6 +22,7 @@ from bot.helper.ext_utils.fs_utils import clean_unwanted, is_archive, get_base_n
 from bot.helper.ext_utils.bot_utils import get_readable_file_size, is_telegram_link, is_url, sync_to_async, download_image_url
 from bot.helper.ext_utils.leech_utils import get_audio_thumb, get_media_info, get_document_type, take_ss, get_ss, get_mediainfo_link, format_filename, remux_container, ensure_streamable, fetch_auto_thumbnail
 from bot.modules.autorename import get_title_for_thumbnail
+from bot.helper.ext_utils.magic_thumb import magic_copy, prepare_cover, cleanup_cover
 
 LOGGER = getLogger(__name__)
 getLogger("pyrogram").setLevel(ERROR)
@@ -59,6 +60,9 @@ class TgUploader:
         self.__user_id = listener.message.from_user.id
         self.__leechmsg = {}
         self.__leech_utils = self.__listener.leech_utils
+        self.__magic = False
+        self.__cover = None
+        self.__magic_cover = None
         
     async def get_custom_thumb(self, thumb):
         if is_telegram_link(thumb):
@@ -105,15 +109,28 @@ class TgUploader:
             return buttons.build_menu(1)
         return None
 
+    async def __copy(self, chat_id, reply_to=None, reply_markup=None):
+        # Magic Thumbnail first (optional), normal copy_message as fallback
+        if self.__magic_cover:
+            if res := await magic_copy(chat_id, self.__sent_msg, self.__magic_cover, reply_to, reply_markup):
+                return res
+        return await bot.copy_message(chat_id=chat_id, from_chat_id=self.__sent_msg.chat.id,
+                                      message_id=self.__sent_msg.id, reply_to_message_id=reply_to)
+
     async def __copy_file(self):
+        self.__magic_cover = None
+        if self.__magic and self.__cover and getattr(self.__sent_msg, 'video', None) and self.__client is bot:
+            self.__magic_cover = await prepare_cover(self.__cover)
+        try:
+            await self.__copy_file_all()
+        finally:
+            cleanup_cover(self.__magic_cover)
+            self.__magic_cover = None
+
+    async def __copy_file_all(self):
         try:
             if self.__bot_pm and (self.__leechmsg and not self.__listener.excep_chat or self.__listener.isSuperGroup):
-                copied = await bot.copy_message(
-                    chat_id=self.__user_id,
-                    from_chat_id=self.__sent_msg.chat.id,
-                    message_id=self.__sent_msg.id,
-                    reply_to_message_id=self.__listener.botpmmsg.id if self.__listener.botpmmsg else None
-                )
+                copied = await self.__copy(self.__user_id, self.__listener.botpmmsg.id if self.__listener.botpmmsg else None)
                 if copied and self.__has_buttons:
                     btn_markup = InlineKeyboardMarkup(BTN) if (BTN := self.__sent_msg.reply_markup.inline_keyboard[:-1]) else None
                     await editReplyMarkup(copied, btn_markup if config_dict['SAVE_MSG'] else self.__sent_msg.reply_markup)
@@ -125,12 +142,7 @@ class TgUploader:
             if len(self.__leechmsg) > 1 and not self.__listener.excep_chat:
                 for chat_id, msg in list(self.__leechmsg.items())[1:]:
                     chat_id, *topics = chat_id.split(':')
-                    leech_copy = await bot.copy_message(
-                        chat_id=int(chat_id),
-                        from_chat_id=self.__sent_msg.chat.id,
-                        message_id=self.__sent_msg.id,
-                        reply_to_message_id=msg.id
-                    )
+                    leech_copy = await self.__copy(int(chat_id), msg.id)
                     # Layer 161 Needed for Topics !
                     if config_dict['CLEAN_LOG_MSG'] and msg.text:
                         await deleteMessage(msg)
@@ -145,11 +157,7 @@ class TgUploader:
                 for channel_id in self.__upload_dest:
                     if chat := (await chat_info(channel_id)):
                         try:
-                            dump_copy = await bot.copy_message(
-                                chat_id=chat.id,
-                                from_chat_id=self.__sent_msg.chat.id,
-                                message_id=self.__sent_msg.id
-                            )
+                            dump_copy = await self.__copy(chat.id)
                             if dump_copy and self.__has_buttons:
                                 btn_markup = InlineKeyboardMarkup(BTN) if (BTN := self.__sent_msg.reply_markup.inline_keyboard[:-1]) else None
                                 await editReplyMarkup(dump_copy, btn_markup if config_dict['SAVE_MSG'] else self.__sent_msg.reply_markup)
@@ -173,6 +181,7 @@ class TgUploader:
         self.__as_doc = user_dict.get('as_doc', False) or (config_dict['AS_DOCUMENT'] if 'as_doc' not in user_dict else False)
         self.__media_group = user_dict.get('media_group') or (config_dict['MEDIA_GROUP'] if 'media_group' not in user_dict else False)
         self.__bot_pm = user_dict.get('bot_pm') or (config_dict['BOT_PM'] if 'bot_pm' not in user_dict else False)
+        self.__magic = user_dict.get('magic_thumb') or (config_dict.get('MAGIC_THUMB', False) if 'magic_thumb' not in user_dict else False)
         self.__mediainfo = user_dict.get('mediainfo') or (config_dict['SHOW_MEDIAINFO'] if 'mediainfo' not in user_dict else False)
         self.__upload_dest = ud if (ud:=self.__listener.upPath) and isinstance(ud, list) else [ud]
         self.__has_buttons = bool(config_dict['SAVE_MSG'] or self.__mediainfo or self.__leech_utils['screenshots'])
@@ -418,6 +427,7 @@ class TgUploader:
             self.__thumb = None
         thumb = self.__thumb
         self.__is_corrupted = False
+        self.__cover = None
         try:
             is_video, is_audio, is_image = await get_document_type(self.__up_path)
 
@@ -519,6 +529,7 @@ class TgUploader:
                                                                     disable_notification=True,
                                                                     progress=self.__upload_progress,
                                                                     reply_markup=buttons)
+                self.__cover = thumb
                 if self.__prm_media and (self.__has_buttons or not self.__leechmsg):
                     try:
                         self.__sent_msg = await bot.copy_message(nrml_media.chat.id, nrml_media.chat.id, nrml_media.id, reply_to_message_id=self.__sent_msg.id, reply_markup=buttons)
