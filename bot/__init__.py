@@ -226,9 +226,11 @@ if len(EXCEP_CHATS) == 0:
 
 def wztgClient(*args, **kwargs):
     if 'max_concurrent_transmissions' in signature(tgClient.__init__).parameters:
-        # It is only a semaphore on chunk transfers. Old fast repo used 1000; a low value (4)
-        # throttles every upload/download to a few chunks at a time = slow transfers.
-        kwargs['max_concurrent_transmissions'] = int(environ.get('MAX_TRANSMISSIONS', '1000') or 1000)
+        # Max files uploading/downloading at the same time (Pyrogram docs: "too high may
+        # result in network related issues"). 1000 = unlimited -> a dozen parallel uploads
+        # saturate the single event-loop thread, pings time out and every session dies
+        # ("Session is stopped"). 4 was too slow. 10 is the middle; override with MAX_TRANSMISSIONS.
+        kwargs['max_concurrent_transmissions'] = int(environ.get('MAX_TRANSMISSIONS', '10') or 10)
     return tgClient(*args, **kwargs)
 
 # --- pyrofork / wzgram compat: loop + start() ---
