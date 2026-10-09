@@ -139,6 +139,11 @@ async def restart(client, message):
             await wait_for(coro, 30)
         except Exception as e:
             LOGGER.error(f"restart: cleanup step failed/timeout: {e!r}")
+    # close the Telegram session cleanly (flushes the sqlite WAL) before update.py touches the folder
+    try:
+        await wait_for(bot.stop(), 15)
+    except Exception as e:
+        LOGGER.error(f"restart: bot.stop failed/timeout: {e!r}")
     try:
         proc1 = await create_subprocess_exec('pkill', '-9', '-f', f'gunicorn|{bot_cache["pkgs"][-1]}')
         proc2 = await create_subprocess_exec('python3', 'update.py')
