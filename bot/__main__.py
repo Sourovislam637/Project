@@ -102,17 +102,29 @@ async def login(_, message):
 
 
 
+RESTART_FILES = ('.restartmsg', '/tmp/.kpsml_restartmsg')
+
+
+def _restartmsg_path():
+    from os.path import isfile
+    return next((f for f in RESTART_FILES if isfile(f)), None)
+
+
+def _rm_restartmsg():
+    from os import remove
+    for f in RESTART_FILES:
+        try:
+            remove(f)
+        except Exception:
+            pass
+
+
 async def restart(client, message):
     restart_message = await sendMessage(message, BotTheme('RESTARTING'))
     if isinstance(restart_message, str):
         chat_id, msg_id = message.chat.id, message.id
     else:
         chat_id, msg_id = restart_message.chat.id, restart_message.id
-    try:
-        async with aiopen(".restartmsg", "w") as f:
-            await f.write(f"{chat_id}\n{msg_id}\n")
-    except Exception as e:
-        LOGGER.error(f"restartmsg write failed: {e}")
     try:
         if scheduler.running:
             scheduler.shutdown(wait=False)
@@ -141,6 +153,14 @@ async def restart(client, message):
                     pass
     except Exception as e:
         LOGGER.error(f"restart: subprocess failed: {e!r}")
+    # Written AFTER update.py: update.py does `git reset --hard`, which deletes files
+    # from the repo dir. A copy in /tmp survives it, so the "Restarted" edit always works.
+    for rf in RESTART_FILES:
+        try:
+            with open(rf, "w") as f:
+                f.write(f"{chat_id}\n{msg_id}\n")
+        except Exception as e:
+            LOGGER.error(f"restartmsg write failed ({rf}): {e}")
     osexecl(executable, executable, "-m", "bot")
 
 
@@ -217,9 +237,13 @@ async def bot_help(client, message):
 
 async def restart_notification():
     now=datetime.now(timezone(config_dict['TIMEZONE']))
-    if await aiopath.isfile(".restartmsg"):
-        with open(".restartmsg") as f:
-            chat_id, msg_id = map(int, f)
+    if rpath := _restartmsg_path():
+        try:
+            with open(rpath) as f:
+                chat_id, msg_id = map(int, f)
+        except Exception as e:
+            LOGGER.error(f"restartmsg read failed: {e}")
+            chat_id, msg_id = 0, 0
     else:
         chat_id, msg_id = 0, 0
 
@@ -227,7 +251,7 @@ async def restart_notification():
         try:
             if msg.startswith("⌬ <b><i>Restarted Successfully!</i></b>"):
                 await bot.edit_message_text(chat_id=chat_id, message_id=msg_id, text=msg, disable_web_page_preview=True)
-                await aioremove(".restartmsg")
+                _rm_restartmsg()
             else:
                 await bot.send_message(chat_id=cid, text=msg, disable_web_page_preview=True, disable_notification=True)
         except Exception as e:
@@ -249,12 +273,12 @@ async def restart_notification():
                 if msg:
                     await send_incompelete_task_message(cid, msg)
 
-    if await aiopath.isfile(".restartmsg"):
+    if chat_id and msg_id:
         try:
             await bot.edit_message_text(chat_id=chat_id, message_id=msg_id, text=BotTheme('RESTART_SUCCESS', time=now.strftime('%I:%M:%S %p'), date=now.strftime('%d/%m/%y'), timz=config_dict['TIMEZONE'], version=get_version()))
         except Exception as e:
-            LOGGER.error(e)
-        await aioremove(".restartmsg")
+            LOGGER.error(f"Restart message edit failed: {e}")
+        _rm_restartmsg()
 
 
 async def log_check():
