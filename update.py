@@ -66,6 +66,20 @@ if len(UPSTREAM_BRANCH) == 0:
     UPSTREAM_BRANCH = 'Project'
 
 if UPSTREAM_REPO is not None:
+    # `git add . / reset --hard` below commits and then deletes/overwrites tracked files. A live
+    # sqlite session (bot.session + -wal/-shm) caught in that ends up as an empty db =
+    # "sqlite3.OperationalError: no such table: version" on the next start. Keep a copy.
+    from glob import glob
+    from shutil import copy2
+    _kept = {}
+    for _f in glob('*.session*'):
+        try:
+            _tmp = f"/tmp/kpsml_keep_{_f}"
+            copy2(_f, _tmp)
+            _kept[_f] = _tmp
+        except Exception as e:
+            log_error(f"Could not back up {_f}: {e}")
+
     if ospath.exists('.git'):
         srun(["rm", "-rf", ".git"])
 
@@ -77,6 +91,13 @@ if UPSTREAM_REPO is not None:
                      && git remote add origin {UPSTREAM_REPO} \
                      && git fetch origin -q \
                      && git reset --hard origin/{UPSTREAM_BRANCH} -q"], shell=True)
+
+    for _f, _tmp in _kept.items():
+        try:
+            copy2(_tmp, _f)
+            remove(_tmp)
+        except Exception as e:
+            log_error(f"Could not restore {_f}: {e}")
 
     repo = UPSTREAM_REPO.split('/')
     if len(repo) >= 2:
