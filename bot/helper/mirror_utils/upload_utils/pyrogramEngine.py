@@ -8,7 +8,7 @@ from PIL import Image
 from pyrogram import StopTransmission
 from pyrogram.types import InputMediaVideo, InputMediaDocument, InlineKeyboardMarkup
 from pyrogram.errors import FloodWait, RPCError, PeerIdInvalid, ChannelInvalid
-from asyncio import sleep
+from asyncio import sleep, wait_for
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type, RetryError
 from re import match as re_match, sub as re_sub
 from natsort import natsorted
@@ -419,7 +419,7 @@ class TgUploader:
         LOGGER.info(f"Leech Completed: {self.name}")
         await self.__listener.onUploadComplete(None, size, self.__msgs_dict, self.__total_files, self.__corrupted, self.name)
 
-    @retry(wait=wait_exponential(multiplier=2, min=4, max=8), stop=stop_after_attempt(3),
+    @retry(wait=wait_exponential(multiplier=2, min=4, max=10), stop=stop_after_attempt(5),
            retry=retry_if_exception_type(Exception))
     async def __upload_file(self, cap_mono, file, force_document=False):
         if self.__thumb is not None and not await aiopath.exists(self.__thumb):
@@ -596,10 +596,33 @@ class TgUploader:
                 if (dir_name := ospath.dirname(thumb)) and dir_name != "Thumbnails" and await aiopath.exists(dir_name):
                     await rmdir(dir_name)
             LOGGER.error(f"{format_exc()}. Path: {self.__up_path}")
+            if isinstance(err, (ConnectionError, TimeoutError, OSError)) or 'Session is stopped' in str(err):
+                await self.__reset_media_sessions()
             if 'Telegram says: [400' in str(err) and key != 'documents':
                 LOGGER.error(f"Retrying As Document. Path: {self.__up_path}")
                 return await self.__upload_file(cap_mono, file, True)
             raise err
+
+    async def __reset_media_sessions(self):
+        # A media session that died stays dead for every following attempt. Drop only the
+        # ones that are really stopped so the retry opens fresh connections.
+        for c in {id(self.__client): self.__client, id(bot): bot}.values():
+            try:
+                sessions = getattr(c, 'media_sessions', None)
+                if not sessions:
+                    continue
+                for dc, ss in list(sessions.items()):
+                    started = getattr(ss, 'is_started', None)
+                    if started is not None and hasattr(started, 'is_set') and started.is_set():
+                        continue
+                    try:
+                        await wait_for(ss.stop(), 10)
+                    except Exception:
+                        pass
+                    sessions.pop(dc, None)
+            except Exception as e:
+                LOGGER.warning(f"media session reset failed: {e!r}")
+        await sleep(2)
 
     @property
     def speed(self):
