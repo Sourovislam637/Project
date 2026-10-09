@@ -573,8 +573,6 @@ if len(GD_INFO) == 0:
 SAVE_MSG = environ.get('SAVE_MSG', '')
 SAVE_MSG = SAVE_MSG.lower() == 'true'
 
-# Magic (instant) Thumbnail: copies sent to user/dump get an extra HD cover via Bot API (no download/upload)
-MAGIC_THUMB = environ.get('MAGIC_THUMB', 'false').lower() == 'true'
 
 SAFE_MODE = environ.get('SAFE_MODE', '')
 SAFE_MODE = SAFE_MODE.lower() == 'true'
@@ -739,7 +737,6 @@ config_dict = {'ANIME_TEMPLATE': ANIME_TEMPLATE,
                'RSS_CHAT': RSS_CHAT,
                'RSS_DELAY': RSS_DELAY,
                'SAVE_MSG': SAVE_MSG,
-               'MAGIC_THUMB': MAGIC_THUMB,
                'SAFE_MODE': SAFE_MODE,
                'SEARCH_API_LINK': SEARCH_API_LINK,
                'SEARCH_LIMIT': SEARCH_LIMIT,
