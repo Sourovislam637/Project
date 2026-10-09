@@ -894,9 +894,28 @@ else:
 
 log_info("Creating client from BOT_TOKEN")
 # update workers are cheap asyncio tasks (old fast repo: 1000). 50 made busy bots queue commands.
-bot = wztgClient('bot', TELEGRAM_API, TELEGRAM_HASH, bot_token=BOT_TOKEN, workers=int(environ.get('TG_WORKERS', '1000') or 1000),
-               parse_mode=enums.ParseMode.HTML)
-bot = tg_start(bot)
+def _new_bot():
+    return wztgClient('bot', TELEGRAM_API, TELEGRAM_HASH, bot_token=BOT_TOKEN, workers=int(environ.get('TG_WORKERS', '1000') or 1000),
+                      parse_mode=enums.ParseMode.HTML)
+
+
+try:
+    bot = tg_start(_new_bot())
+except Exception as _e:
+    # A restart can leave a half-written bot.session (sqlite: "no such table: version").
+    # The session of a bot token is disposable: delete it and log in again.
+    if 'sqlite' in repr(_e).lower() or 'no such table' in str(_e).lower() or 'database' in str(_e).lower():
+        log_error(f"Broken bot session file ({_e}); deleting it and logging in again")
+        from glob import glob as _glob
+        from os import remove as _remove
+        for _f in _glob('bot.session*'):
+            try:
+                _remove(_f)
+            except Exception:
+                pass
+        bot = tg_start(_new_bot())
+    else:
+        raise
 
 
 # Every command/callback handler runs as its own task. Without this a slow handler
