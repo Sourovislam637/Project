@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import re
 import requests
+from bot.helper.ext_utils.bot_utils import sync_to_async
 from contextlib import suppress
 from re import findall, IGNORECASE
 from pycountry import countries as conn
@@ -40,7 +41,7 @@ async def imdb_search(_, message):
                 movieid = match.group(1)
                 url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&i={movieid}"
                 try:
-                    movie = requests.get(url).json()
+                    movie = await sync_to_async(lambda u=url: requests.get(u, timeout=20).json())
                     if movie.get("Response") == "True":
                         buttons.ibutton(f"🎬 {movie.get('Title')} ({movie.get('Year')})", f"imdb {user_id} movie {movieid}")
                     else:
@@ -51,7 +52,7 @@ async def imdb_search(_, message):
             else:
                 return await editMessage(k, "<i>Invalid IMDb URL</i>")
         else:
-            movies = get_poster(title, bulk=True)
+            movies = await sync_to_async(get_poster, title, bulk=True)
             if not movies:
                 return await editMessage(k, "<i>No Results Found</i>, Try Again or Use <b>Title ID</b>")
             for movie in movies:
@@ -209,7 +210,7 @@ async def imdb_callback(_, query):
         await query.answer("Not Yours!", show_alert=True)
     elif data[2] == "movie":
         await query.answer()
-        imdb = get_poster(query=data[3], id=True)
+        imdb = await sync_to_async(get_poster, query=data[3], id=True)
         buttons = []
         if imdb and imdb.get('trailer'):
             if isinstance(imdb['trailer'], list):
