@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from traceback import format_exc
-from asyncio import sleep
+from asyncio import sleep, Lock
 from aiofiles.os import remove as aioremove
 from random import choice as rchoice
 from time import time
@@ -141,7 +141,7 @@ async def sendMultiMessage(chat_ids, text, buttons=None, photo=None):
     return msg_dict
 
 
-async def editMessage(message, text, buttons=None, photo=None):
+async def editMessage(message, text, buttons=None, photo=None, flood_skip=False):
     try:
         if message.media:
             if photo:
@@ -151,6 +151,9 @@ async def editMessage(message, text, buttons=None, photo=None):
         await message.edit(text=text, disable_web_page_preview=True, reply_markup=buttons)
     except FloodWait as f:
         LOGGER.warning(str(f))
+        if flood_skip:
+            # periodic status edits: never sleep/retry here, caller skips next ticks
+            return f'FloodWait:{f.value}'
         await sleep(f.value * 1.2)
         return await editMessage(message, text, buttons, photo)
     except (MessageNotModified, MessageEmpty):
@@ -291,44 +294,46 @@ async def get_tg_link_content(link, user_id, decrypter=None):
 
 
 async def update_all_messages(force=False):
+    # Status edits can hit FloodWait. Never sleep while holding the locks and never
+    # retry here - just skip ticks until the flood is over, so new tasks/commands
+    # are not frozen behind the status loop.
+    if time() < bot_cache.get('status_flood_until', 0):
+        return
     async with status_reply_dict_lock:
         if not status_reply_dict or not Interval or (not force and time() - list(status_reply_dict.values())[0][1] < 3):
             return
         for chat_id in list(status_reply_dict.keys()):
             status_reply_dict[chat_id][1] = time()
+        chats = list(status_reply_dict.items())
     async with download_dict_lock:
         msg, buttons = await sync_to_async(get_readable_message)
     if msg is None:
         return
-    async with status_reply_dict_lock:
-        for chat_id in list(status_reply_dict.keys()):
-            # status_reply_dict[chat_id] is always a truthy 2-item list
-            # ([message_or_None, timestamp]) even when the message itself is
-            # None (e.g. sendStatusMessage failed to deliver it) - checking
-            # the list's truthiness never catches that case. Left unfixed,
-            # this raised AttributeError on .text below and aborted the
-            # whole loop, silently breaking status updates for *every other*
-            # chat too (not just this one), which is why a cancelled task
-            # could keep showing indefinitely.
-            if status_reply_dict[chat_id][0] is None:
-                del status_reply_dict[chat_id]
-                continue
-            if msg != status_reply_dict[chat_id][0].text:
-                # Only the text/caption needs to change on a periodic status
-                # tick - the photo was already set once when the status
-                # message was first created (sendStatusMessage). Passing
-                # 'IMAGES' here made every single refresh (every few seconds,
-                # per active task) swap in a brand new random photo via
-                # edit_media, which is a much heavier Telegram API call than
-                # a plain caption edit and made status updates far more
-                # likely to hit FloodWait or fall behind/freeze, especially
-                # with several tasks running across multiple chats.
-                rmsg = await editMessage(status_reply_dict[chat_id][0], msg, buttons)
-                if isinstance(rmsg, str) and rmsg.startswith('Telegram says: [400'):
+    for chat_id, entry in chats:
+        message = entry[0]
+        if message is None:
+            # status message was never delivered, drop it so it can't break other chats
+            async with status_reply_dict_lock:
+                if status_reply_dict.get(chat_id) is entry:
                     del status_reply_dict[chat_id]
+            continue
+        if msg != message.text:
+            # Only text/caption changes on a periodic tick (photo set once at creation)
+            rmsg = await editMessage(message, msg, buttons, flood_skip=True)
+            if isinstance(rmsg, str):
+                if rmsg.startswith('FloodWait:'):
+                    bot_cache['status_flood_until'] = time() + int(rmsg.split(':')[1]) + 1
+                    break
+                if rmsg.startswith('Telegram says: [400'):
+                    async with status_reply_dict_lock:
+                        if status_reply_dict.get(chat_id) is entry:
+                            del status_reply_dict[chat_id]
                     continue
-                status_reply_dict[chat_id][0].text = msg
-                status_reply_dict[chat_id][1] = time()
+            message.text = msg
+            entry[1] = time()
+
+
+_status_send_locks = {}
 
 
 async def sendStatusMessage(msg):
@@ -336,22 +341,26 @@ async def sendStatusMessage(msg):
         progress, buttons = await sync_to_async(get_readable_message)
     if progress is None:
         return
-    async with status_reply_dict_lock:
-        chat_id = msg.chat.id
-        if chat_id in list(status_reply_dict.keys()):
-            message = status_reply_dict[chat_id][0]
-            if message is not None:
-                await deleteMessage(message)
-            del status_reply_dict[chat_id]
-        if message := await sendMessage(msg, progress, buttons, photo='IMAGES'):
+    chat_id = msg.chat.id
+    # per-chat lock only: sending (can FloodWait) must not hold the global status lock
+    async with _status_send_locks.setdefault(chat_id, Lock()):
+        async with status_reply_dict_lock:
+            old = status_reply_dict.pop(chat_id, None)
+        if old and old[0] is not None:
+            await deleteMessage(old[0])
+        message = await sendMessage(msg, progress, buttons, photo='IMAGES')
+        if isinstance(message, str):
+            message = None
+        elif message:
             if hasattr(message, 'caption'):
                 message.caption = progress
             else:
                 message.text = progress
-        status_reply_dict[chat_id] = [message, time()]
-        if not Interval:
-            Interval.append(setInterval(config_dict['STATUS_UPDATE_INTERVAL'], update_all_messages))
-    
+        async with status_reply_dict_lock:
+            status_reply_dict[chat_id] = [message, time()]
+            if not Interval:
+                Interval.append(setInterval(config_dict['STATUS_UPDATE_INTERVAL'], update_all_messages))
+
 
 async def open_category_btns(message):
     user_id = message.from_user.id
