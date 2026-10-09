@@ -52,7 +52,24 @@ def validate_autorename_format(format_str):
     used_tags = set(re.findall(r'\{([a-zA-Z_]+)\}', format_str))
     return used_tags - VALID_AUTORENAME_TAGS
 
+_TITLE_CACHE = {}
+
+
 async def resolve_auto_title(search_name):
+    # PERF: a season leech has dozens of files with the same cleaned name -> do the
+    # AniList/TMDB lookup once, not once per file (each call can take seconds).
+    key = (search_name or '').strip().lower()
+    if key in _TITLE_CACHE:
+        return _TITLE_CACHE[key]
+    res = await _resolve_auto_title(search_name)
+    if res:
+        if len(_TITLE_CACHE) > 300:
+            _TITLE_CACHE.clear()
+        _TITLE_CACHE[key] = res
+    return res
+
+
+async def _resolve_auto_title(search_name):
     """
     Used when the format uses {title} but the user has no Custom Title set.
     Searches AniList for an anime match using the cleaned filename
