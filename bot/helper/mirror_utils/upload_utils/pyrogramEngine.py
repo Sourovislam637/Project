@@ -60,7 +60,7 @@ class TgUploader:
         self.__user_id = listener.message.from_user.id
         self.__leechmsg = {}
         self.__leech_utils = self.__listener.leech_utils
-        self.__magic = False
+        self.__magic = True  # Magic Thumbnail: always enabled (falls back to normal copy on any failure)
         self.__cover = None
         self.__magic_cover = None
         
@@ -181,7 +181,6 @@ class TgUploader:
         self.__as_doc = user_dict.get('as_doc', False) or (config_dict['AS_DOCUMENT'] if 'as_doc' not in user_dict else False)
         self.__media_group = user_dict.get('media_group') or (config_dict['MEDIA_GROUP'] if 'media_group' not in user_dict else False)
         self.__bot_pm = user_dict.get('bot_pm') or (config_dict['BOT_PM'] if 'bot_pm' not in user_dict else False)
-        self.__magic = user_dict.get('magic_thumb') or (config_dict.get('MAGIC_THUMB', False) if 'magic_thumb' not in user_dict else False)
         self.__mediainfo = user_dict.get('mediainfo') or (config_dict['SHOW_MEDIAINFO'] if 'mediainfo' not in user_dict else False)
         self.__upload_dest = ud if (ud:=self.__listener.upPath) and isinstance(ud, list) else [ud]
         self.__has_buttons = bool(config_dict['SAVE_MSG'] or self.__mediainfo or self.__leech_utils['screenshots'])
