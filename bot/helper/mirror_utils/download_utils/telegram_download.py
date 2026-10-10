@@ -4,6 +4,7 @@ from time import time
 from asyncio import Lock
 from pyrogram import Client, StopTransmission
 
+from bot.helper.ext_utils.tg_recover import run_guarded
 from bot import LOGGER, download_dict, download_dict_lock, non_queued_dl, queue_dict_lock, bot, user, IS_PREMIUM_USER
 from bot.helper.mirror_utils.status_utils.telegram_status import TelegramStatus
 from bot.helper.mirror_utils.status_utils.queue_status import QueueStatus
@@ -20,6 +21,7 @@ class TelegramDownloadHelper:
     def __init__(self, listener):
         self.name = ""
         self.__processed_bytes = 0
+        self.__progress = {'t': time()}
         self.__start_time = time()
         self.__listener = listener
         self.__client = bot
@@ -55,6 +57,7 @@ class TelegramDownloadHelper:
     async def __onDownloadProgress(self, current, total):
         if self.__is_cancelled:
             raise StopTransmission
+        self.__progress['t'] = time()
         self.__processed_bytes = current
 
     async def __onDownloadError(self, error):
@@ -82,7 +85,16 @@ class TelegramDownloadHelper:
                         await self.__onDownloadError(f'ERROR: {e}')
                         return
             else:
-                download = await self.__client.download_media(message=message, file_name=path, progress=self.__onDownloadProgress)
+                for attempt in range(3):
+                    try:
+                        download = await run_guarded(
+                            lambda: self.__client.download_media(message=message, file_name=path, progress=self.__onDownloadProgress),
+                            self.__progress, lambda: self.__is_cancelled, name='Telegram download')
+                        break
+                    except ConnectionError as ce:
+                        if attempt == 2 or self.__is_cancelled:
+                            raise
+                        LOGGER.warning(f"{ce} - retry {attempt + 1}")
             if self.__is_cancelled:
                 await self.__onDownloadError('Cancelled by user!')
                 return
