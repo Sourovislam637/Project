@@ -22,6 +22,7 @@ from bot.helper.ext_utils.fs_utils import clean_unwanted, is_archive, get_base_n
 from bot.helper.ext_utils.bot_utils import get_readable_file_size, is_telegram_link, is_url, sync_to_async, download_image_url
 from bot.helper.ext_utils.leech_utils import get_audio_thumb, get_media_info, get_document_type, take_ss, get_ss, get_mediainfo_link, format_filename, remux_container, ensure_streamable, fetch_auto_thumbnail
 from bot.modules.autorename import get_title_for_thumbnail
+from bot.helper.ext_utils.tg_recover import run_guarded, reset_media_sessions
 from bot.helper.ext_utils.magic_thumb import magic_copy, prepare_cover, cleanup_cover
 
 LOGGER = getLogger(__name__)
@@ -60,6 +61,7 @@ class TgUploader:
         self.__user_id = listener.message.from_user.id
         self.__leechmsg = {}
         self.__leech_utils = self.__listener.leech_utils
+        self.__progress = {'t': time()}
         self.__magic = True  # Magic Thumbnail: always enabled (falls back to normal copy on any failure)
         self.__cover = None
         self.__magic_cover = None
@@ -172,6 +174,7 @@ class TgUploader:
     async def __upload_progress(self, current, total):
         if self.__is_cancelled:
             raise StopTransmission
+        self.__progress['t'] = time()
         chunk_size = current - self.__last_uploaded
         self.__last_uploaded = current
         self.__processed_bytes += chunk_size
@@ -422,6 +425,11 @@ class TgUploader:
     @retry(wait=wait_exponential(multiplier=2, min=4, max=10), stop=stop_after_attempt(5),
            retry=retry_if_exception_type(Exception))
     async def __upload_file(self, cap_mono, file, force_document=False):
+        # a stalled upload (0 B/s) is aborted and retried instead of hanging forever
+        return await run_guarded(lambda: self.__upload_file_inner(cap_mono, file, force_document),
+                                 self.__progress, lambda: self.__is_cancelled, name='Upload')
+
+    async def __upload_file_inner(self, cap_mono, file, force_document=False):
         if self.__thumb is not None and not await aiopath.exists(self.__thumb):
             self.__thumb = None
         thumb = self.__thumb
@@ -589,6 +597,7 @@ class TgUploader:
         except FloodWait as f:
             LOGGER.warning(str(f))
             await sleep(f.value)
+            raise f
         except Exception as err:
             self.__retry_error = True
             if self.__thumb is None and thumb is not None and await aiopath.exists(thumb):
@@ -604,24 +613,7 @@ class TgUploader:
             raise err
 
     async def __reset_media_sessions(self):
-        # A media session that died stays dead for every following attempt. Drop only the
-        # ones that are really stopped so the retry opens fresh connections.
-        for c in {id(self.__client): self.__client, id(bot): bot}.values():
-            try:
-                sessions = getattr(c, 'media_sessions', None)
-                if not sessions:
-                    continue
-                for dc, ss in list(sessions.items()):
-                    started = getattr(ss, 'is_started', None)
-                    if started is not None and hasattr(started, 'is_set') and started.is_set():
-                        continue
-                    try:
-                        await wait_for(ss.stop(), 10)
-                    except Exception:
-                        pass
-                    sessions.pop(dc, None)
-            except Exception as e:
-                LOGGER.warning(f"media session reset failed: {e!r}")
+        await reset_media_sessions(self.__client, bot)
         await sleep(2)
 
     @property
