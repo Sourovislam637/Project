@@ -229,8 +229,12 @@ def wztgClient(*args, **kwargs):
         # Max files uploading/downloading at the same time (Pyrogram docs: "too high may
         # result in network related issues"). 1000 = unlimited -> a dozen parallel uploads
         # saturate the single event-loop thread, pings time out and every session dies
-        # ("Session is stopped"). 4 was too slow. 10 is the middle; override with MAX_TRANSMISSIONS.
-        kwargs['max_concurrent_transmissions'] = int(environ.get('MAX_TRANSMISSIONS', '10') or 10)
+        # ("Session is stopped"). 4 was too slow. 30 is the middle; override with MAX_TRANSMISSIONS.
+        kwargs['max_concurrent_transmissions'] = int(environ.get('MAX_TRANSMISSIONS', '30') or 30)
+    # No sqlite session file (same as the wzgram authors' WZML-X): nothing to corrupt on restart,
+    # no disk writes for every update. A bot token logs in again in a second.
+    if 'in_memory' in signature(tgClient.__init__).parameters:
+        kwargs['in_memory'] = True
     return tgClient(*args, **kwargs)
 
 # --- pyrofork / wzgram compat: loop + start() ---
@@ -261,7 +265,7 @@ USER_SESSION_STRING = environ.get('USER_SESSION_STRING', '')
 if len(USER_SESSION_STRING) != 0:
     log_info("Creating client from USER_SESSION_STRING")
     try:
-        user = wztgClient('user', TELEGRAM_API, TELEGRAM_HASH, session_string=USER_SESSION_STRING,
+        user = wztgClient('user', TELEGRAM_API, TELEGRAM_HASH, session_string=USER_SESSION_STRING, sleep_threshold=60,
                         parse_mode=enums.ParseMode.HTML, no_updates=True)
         user = tg_start(user)
         IS_PREMIUM_USER = user.me.is_premium
@@ -901,8 +905,18 @@ def _new_bot():
                       parse_mode=enums.ParseMode.HTML)
 
 
+def _start_bot_floodsafe():
+    from pyrogram.errors import FloodWait as _FW
+    while True:
+        try:
+            return tg_start(_new_bot())
+        except _FW as _f:
+            log_warning(f"Telegram FloodWait on login: sleeping {_f.value}s")
+            bot_loop.run_until_complete(__import__('asyncio').sleep(_f.value + 1))
+
+
 try:
-    bot = tg_start(_new_bot())
+    bot = _start_bot_floodsafe()
 except Exception as _e:
     # A restart can leave a half-written bot.session (sqlite: "no such table: version").
     # The session of a bot token is disposable: delete it and log in again.
@@ -915,7 +929,7 @@ except Exception as _e:
                 _remove(_f)
             except Exception:
                 pass
-        bot = tg_start(_new_bot())
+        bot = _start_bot_floodsafe()
     else:
         raise
 
