@@ -197,9 +197,20 @@ async def log(_, message):
     buttons = ButtonMaker()
     buttons.ibutton(BotTheme('LOG_DISPLAY_BT'), f'kpsmlx {message.from_user.id} logdisplay')
     buttons.ibutton(BotTheme('WEB_PASTE_BT'), f'kpsmlx {message.from_user.id} webpaste')
-    res = await sendFile(message, send_path, buttons=buttons.build_menu(1))
+    # uploads go through a media session; if that one is hung, don't leave /log silent
+    try:
+        res = await wait_for(sendFile(message, send_path, buttons=buttons.build_menu(1)), 60)
+    except Exception as e:
+        res = f"{type(e).__name__}: {e}"
     if isinstance(res, str):
-        await sendMessage(message, f"<b>Log send failed:</b> <code>{res[:300]}</code>")
+        try:
+            async with aiopen('log.txt', 'rb') as f:
+                await f.seek(max(0, size - 3200))
+                tail = (await f.read()).decode('utf-8', 'ignore')
+        except Exception:
+            tail = ''
+        from html import escape as _esc
+        await sendMessage(message, f"<b>Log file upload failed</b> (<code>{_esc(res[:150])}</code>)\n<b>Last lines:</b>\n<pre>{_esc(tail[-3200:])}</pre>")
 
 
 async def search_images():
